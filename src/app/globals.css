@@ -117,3 +117,547 @@ button { cursor: pointer; }
   .process { grid-template-columns:1fr; } .career { padding:28px; } .footer-grid { flex-direction:column; }
   .actions .btn { width:100%; text-align:center; } .field.full { grid-column:auto; }
 }
+
+/* =========================================================
+   NOVA ACADEMY — PREMIUM SPACING & LAYOUT
+   ========================================================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+section[id] {
+  scroll-margin-top: 90px;
+}
+
+/* ---------- General typography ---------- */
+
+.section {
+  padding: 120px 0;
+  position: relative;
+}
+
+.section + .section {
+  border-top: 1px solid rgba(255,255,255,.035);
+}
+
+.h2 {
+  max-width: 900px;
+  margin: 18px 0 28px;
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.06;
+  letter-spacing: -.045em;
+}
+
+.section-lead {
+  max-width: 720px;
+  margin: 0 0 48px;
+  font-size: 17px;
+  line-height: 1.8;
+  opacity: .68;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  letter-spacing: .12em;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  padding: 125px 0 95px;
+  position: relative;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(380px, .92fr);
+  align-items: center;
+  gap: 80px;
+}
+
+.hero-title {
+  max-width: 850px;
+  margin: 22px 0 28px;
+  font-size: clamp(48px, 6.4vw, 82px);
+  line-height: 1.02;
+  letter-spacing: -.055em;
+}
+
+.hero-subtitle {
+  max-width: 680px;
+  margin: 0 0 38px;
+  font-size: 18px;
+  line-height: 1.8;
+  opacity: .68;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 34px;
+}
+
+.hero-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  font-size: 13px;
+  opacity: .48;
+}
+
+.hero-trust span {
+  position: relative;
+}
+
+.hero-trust span:not(:last-child)::after {
+  content: "•";
+  position: absolute;
+  right: -14px;
+  opacity: .45;
+}
+
+/* ---------- Stats ---------- */
+
+.stats-section {
+  padding: 42px 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 20px;
+}
+
+.stat {
+  min-height: 145px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  background: rgba(255,255,255,.018);
+}
+
+.stat + .stat {
+  border-left: 1px solid rgba(255,255,255,.06);
+}
+
+.stat strong {
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+
+.stat span {
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: .52;
+}
+
+/* ---------- Cards ---------- */
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 50px;
+}
+
+.cards-grid .card {
+  min-height: 360px;
+}
+
+.card {
+  padding: 30px;
+  border-radius: 20px;
+  transition:
+    transform .25s ease,
+    border-color .25s ease,
+    background .25s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card h3 {
+  margin: 16px 0 13px;
+  line-height: 1.25;
+}
+
+.card p {
+  line-height: 1.75;
+}
+
+.card-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 24px;
+}
+
+.tag {
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.card-link {
+  display: inline-block;
+  margin-top: 27px;
+  font-size: 13px;
+}
+
+/* ---------- Why Nova ---------- */
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 52px;
+}
+
+.feature-card {
+  min-height: 260px;
+}
+
+.feature-card h3 {
+  margin-top: 22px;
+}
+
+/* ---------- Roadmap ---------- */
+
+.roadmap-box,
+.ai-box,
+.career-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: center;
+  gap: 70px;
+  padding: 70px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 85% 50%, rgba(255,255,255,.045), transparent 35%),
+    rgba(255,255,255,.015);
+}
+
+.roadmap-content .h2,
+.ai-box .h2,
+.career-box .h2 {
+  margin-bottom: 25px;
+}
+
+.roadmap-visual,
+.career-icon {
+  display: grid;
+  place-items: center;
+  min-height: 250px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.02);
+  opacity: .75;
+}
+
+.check-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 34px;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: .72;
+}
+
+.check-item svg {
+  flex: 0 0 auto;
+}
+
+/* ---------- AI ---------- */
+
+.ai-box {
+  grid-template-columns: minmax(0, 1fr) 240px;
+}
+
+.ai-box > svg {
+  justify-self: center;
+  opacity: .7;
+}
+
+/* ---------- Process ---------- */
+
+.process {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 50px;
+}
+
+.process .card {
+  min-height: 205px;
+}
+
+.process-num {
+  margin-bottom: 28px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.process .card h3 {
+  margin-bottom: 12px;
+}
+
+/* ---------- Career ---------- */
+
+.career-box {
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+
+.career-box .btn {
+  margin-top: 12px;
+}
+
+/* ---------- FAQ ---------- */
+
+.faq {
+  max-width: 900px;
+  margin-top: 48px;
+}
+
+.faq details {
+  padding: 22px 0;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.faq summary span {
+  flex: 0 0 auto;
+  font-size: 22px;
+  opacity: .55;
+}
+
+.faq details p {
+  max-width: 760px;
+  margin: 17px 0 4px;
+  line-height: 1.75;
+  opacity: .62;
+}
+
+/* ---------- Footer ---------- */
+
+.footer {
+  padding: 70px 0 45px;
+}
+
+.footer-grid {
+  align-items: flex-start;
+  gap: 50px;
+}
+
+.footer-grid p {
+  margin-top: 14px;
+  line-height: 1.6;
+  opacity: .55;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  min-height: 48px;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1050px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 50px;
+  }
+
+  .hero-grid > :last-child {
+    max-width: 650px;
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat + .stat {
+    border-left: 0;
+  }
+
+  .stat:nth-child(odd) {
+    border-right: 1px solid rgba(255,255,255,.06);
+  }
+
+  .roadmap-box,
+  .ai-box,
+  .career-box {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding: 50px;
+  }
+
+  .roadmap-visual,
+  .career-icon {
+    min-height: 190px;
+  }
+
+  .process {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .section {
+    padding: 82px 0;
+  }
+
+  .hero {
+    padding: 85px 0 65px;
+  }
+
+  .hero-title {
+    font-size: clamp(42px, 13vw, 62px);
+  }
+
+  .hero-subtitle {
+    font-size: 16px;
+    line-height: 1.7;
+    margin-bottom: 30px;
+  }
+
+  .hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+  }
+
+  .hero-trust {
+    gap: 8px 18px;
+    line-height: 1.5;
+  }
+
+  .h2 {
+    font-size: clamp(34px, 10vw, 48px);
+    line-height: 1.08;
+    margin-bottom: 22px;
+  }
+
+  .section-lead {
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 34px;
+  }
+
+  .cards-grid,
+  .feature-grid,
+  .process {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 35px;
+  }
+
+  .cards-grid .card {
+    min-height: auto;
+  }
+
+  .feature-card {
+    min-height: auto;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stat {
+    min-height: 125px;
+    padding: 24px 18px;
+  }
+
+  .stat strong {
+    font-size: 28px;
+  }
+
+  .stat:nth-child(odd) {
+    border-right: 1px solid rgba(255,255,255,.06);
+  }
+
+  .roadmap-box,
+  .ai-box,
+  .career-box {
+    padding: 30px 23px;
+    border-radius: 22px;
+  }
+
+  .roadmap-visual,
+  .career-icon {
+    min-height: 150px;
+  }
+
+  .process {
+    margin-top: 35px;
+  }
+
+  .process .card {
+    min-height: 170px;
+  }
+
+  .faq {
+    margin-top: 34px;
+  }
+
+  .faq summary {
+    font-size: 15px;
+  }
+}
+
