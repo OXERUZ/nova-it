@@ -27,14 +27,27 @@ export default function ApplicationModal({onClose}:{onClose:()=>void}) {
     setLoading(true); setError("");
     try {
       const supabase=createClient();
-      const {data: row,error}=await supabase.from("applications").insert({
-        full_name:data.full_name.trim(), phone:data.phone.trim(), telegram:data.telegram.trim()||null,
-        age:data.age?Number(data.age):null, city:data.city||null, education:data.education||null,
-        experience_level:data.experience_level||null, course:data.course, study_format:data.study_format,
-        goal:data.goal||null, source:data.source||null, message:data.message||null, status:"new"
-      }).select("application_number").single();
-      if(error) throw error;
-      setSuccess(row?.application_number || "NOVA");
+      const { data: applicationNumber, error } = await supabase.rpc(
+        "submit_application",
+        {
+          p_full_name: data.full_name.trim(),
+          p_phone: data.phone.trim(),
+          p_telegram: data.telegram.trim() || null,
+          p_age: data.age ? Number(data.age) : null,
+          p_city: data.city || null,
+          p_education: data.education || null,
+          p_experience_level: data.experience_level || null,
+          p_course: data.course,
+          p_study_format: data.study_format,
+          p_goal: data.goal || null,
+          p_source: data.source || null,
+          p_message: data.message || null,
+        }
+      );
+
+      if (error) throw error;
+
+      setSuccess(applicationNumber || "NOVA");
     } catch(err:any) { setError(err?.message || "Arizani yuborishda xatolik yuz berdi."); }
     finally { setLoading(false); }
   };
