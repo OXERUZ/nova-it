@@ -1,5 +1,5 @@
  "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, LogOut, RefreshCw, Trash2, Save, LayoutDashboard, Users, BookOpen, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
@@ -8,13 +8,74 @@ type App = {id:string;application_number:string;full_name:string;phone:string;te
 const statusLabels:Record<string,string>={new:"Yangi",contacted:"Bog‘lanildi",interview:"Suhbat",accepted:"Qabul qilindi",rejected:"Rad etildi",studying:"O‘qimoqda",completed:"Tugatdi"};
 
 export default function AdminPage(){
- const supabase=createClient(); const [session,setSession]=useState<any>(null); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [apps,setApps]=useState<App[]>([]); const [selected,setSelected]=useState<App|null>(null); const [q,setQ]=useState(""); const [status,setStatus]=useState(""); const [course,setCourse]=useState(""); const [loading,setLoading]=useState(false); const [error,setError]=useState("");
- useEffect(()=>{supabase.auth.getSession().then(({data})=>{setSession(data.session);if(data.session)load()});},[]);
- async function load(){setLoading(true);const {data,error}=await supabase.from("applications").select("*").order("created_at",{ascending:false});if(error)setError(error.message);setApps(data||[]);setLoading(false)}
- async function login(e:React.FormEvent){e.preventDefault();setError("");const {data,error}=await supabase.auth.signInWithPassword({email,password});if(error)setError(error.message);else{setSession(data.session);load()}}
- async function logout(){await supabase.auth.signOut();setSession(null)}
- async function update(){if(!selected)return;const {data,error}=await supabase.from("applications").update({status:selected.status,admin_note:selected.admin_note}).eq("id",selected.id).select("*").single();if(error)setError(error.message);else{setApps(a=>a.map(x=>x.id===data.id?data:x));setSelected(data)}}
- async function remove(){if(!selected)return;if(!confirm("Arizani o‘chirishni tasdiqlaysizmi?"))return;const {error}=await supabase.from("applications").delete().eq("id",selected.id);if(error)setError(error.message);else{setApps(a=>a.filter(x=>x.id!==selected.id));setSelected(null)}}
+ const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null); const [session,setSession]=useState<any>(null); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [apps,setApps]=useState<App[]>([]); const [selected,setSelected]=useState<App|null>(null); const [q,setQ]=useState(""); const [status,setStatus]=useState(""); const [course,setCourse]=useState(""); const [loading,setLoading]=useState(false); const [error,setError]=useState("");
+ useEffect(()=>{
+  const client = createClient();
+  supabaseRef.current = client;
+
+  client.auth.getSession().then(({data})=>{
+    setSession(data.session);
+    if(data.session) load();
+  });
+ },[]);
+ async function load(){
+  const supabase = supabaseRef.current;
+  if(!supabase) return;
+
+  setLoading(true);
+  const {data,error}=await supabase.from("applications").select("*").order("created_at",{ascending:false});
+  if(error)setError(error.message);
+  setApps(data||[]);
+  setLoading(false);
+ }
+ async function login(e:React.FormEvent){
+  e.preventDefault();
+
+  const supabase = supabaseRef.current;
+  if(!supabase) return;
+
+  setError("");
+  const {data,error}=await supabase.auth.signInWithPassword({email,password});
+
+  if(error)setError(error.message);
+  else{
+    setSession(data.session);
+    load();
+  }
+ }
+ async function logout(){
+  const supabase = supabaseRef.current;
+  if(!supabase) return;
+
+  await supabase.auth.signOut();
+  setSession(null);
+ }
+ async function update(){
+  const supabase = supabaseRef.current;
+  if(!supabase || !selected) return;
+
+  const {data,error}=await supabase.from("applications").update({status:selected.status,admin_note:selected.admin_note}).eq("id",selected.id).select("*").single();
+
+  if(error)setError(error.message);
+  else{
+    setApps(a=>a.map(x=>x.id===data.id?data:x));
+    setSelected(data);
+  }
+ }
+ async function remove(){
+  const supabase = supabaseRef.current;
+  if(!supabase || !selected) return;
+
+  if(!confirm("Arizani o‘chirishni tasdiqlaysizmi?")) return;
+
+  const {error}=await supabase.from("applications").delete().eq("id",selected.id);
+
+  if(error)setError(error.message);
+  else{
+    setApps(a=>a.filter(x=>x.id!==selected.id));
+    setSelected(null);
+  }
+ }
  const filtered=useMemo(()=>apps.filter(a=>(!q||[a.full_name,a.phone,a.telegram,a.application_number].join(" ").toLowerCase().includes(q.toLowerCase()))&&(!status||a.status===status)&&(!course||a.course===course)),[apps,q,status,course]);
  const counts=useMemo(()=>({all:apps.length,new:apps.filter(a=>a.status==="new").length,interview:apps.filter(a=>a.status==="interview").length,accepted:apps.filter(a=>a.status==="accepted").length,studying:apps.filter(a=>a.status==="studying").length}),[apps]);
  if(!session)return <div style={{minHeight:"100vh",display:"grid",placeItems:"center",padding:20}}><form className="card" style={{width:"min(420px,100%)"}} onSubmit={login}><div className="logo">NOVA <span>ACADEMY</span></div><h2>Admin CRM</h2><p className="muted">Authenticated admin kirishi.</p><div className="field"><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/></div><div className="field" style={{marginTop:12}}><label>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} required/></div>{error&&<p style={{color:"#ff7777"}}>{error}</p>}<button className="btn primary" style={{marginTop:18,width:"100%"}}>Kirish</button></form></div>;
