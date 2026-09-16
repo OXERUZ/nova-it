@@ -23,24 +23,41 @@ export default function LoginPage() {
   async function redirectByRole() {
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    if (userError || !user) {
+      setError("Sessiya topilmadi. Qaytadan login qiling.");
+      return;
+    }
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .maybeSingle();
+      .single();
+
+    console.log("LOGIN USER:", user.email);
+    console.log("LOGIN PROFILE:", profile);
+    console.log("PROFILE ERROR:", profileError);
+
+    if (profileError) {
+      setError("Profil ma'lumotlarini o‘qib bo‘lmadi.");
+      return;
+    }
 
     if (profile?.role === "admin") {
       router.replace("/admin");
-    } else if (profile?.role === "student") {
-      router.replace("/dashboard");
-    } else {
-      await supabase.auth.signOut();
-      setError("Bu hisob NOVA ACADEMY tizimiga biriktirilmagan.");
+      return;
     }
+
+    if (profile?.role === "student") {
+      router.replace("/dashboard");
+      return;
+    }
+
+    await supabase.auth.signOut();
+    setError("Bu hisob NOVA ACADEMY tizimiga biriktirilmagan.");
   }
 
   useEffect(() => {
