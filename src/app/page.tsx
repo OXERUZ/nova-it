@@ -7,13 +7,15 @@ import ApplicationModal from "@/components/ApplicationModal";
 import CourseDetail from "@/components/CourseDetail";
 import { courses, roadmap, faqs, projects } from "@/lib/data";
 import type { Course } from "@/types";
+import NovaMotion from "@/components/NovaMotion";
 
 export default function Home() {
   const [apply,setApply]=useState(false); const [selected,setSelected]=useState<Course|null>(null); const [selectedCourse,setSelectedCourse]=useState<Course|null>(null);
   const openApply=(course?:Course)=>{setSelected(null);setSelectedCourse(course??null);setApply(true)};
   return <>
     <Navbar onApply={()=>openApply()}/>
-    <main>
+    <NovaMotion />
+      <main>
       <section className="hero" id="hero"><div className="grid-bg"/><div className="hero-glow hero-glow-a"/><div className="hero-glow hero-glow-b"/>
         <div className="container hero-grid">
           <div className="hero-copy"><div className="pill"><span className="pulse-dot"/> 2026 QABUL OCHIQ <span className="pill-line"/> NOVA ACADEMY</div>

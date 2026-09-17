@@ -5,7 +5,24 @@ import { ArrowUpRight, BookOpen, CalendarDays, Check, ChevronRight, ClipboardChe
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
-type Tab = "overview"|"students"|"groups"|"courses"|"attendance"|"payments"|"leads"|"staff"|"schedule"|"reports"|"access";
+type Tab =
+  | "overview"
+  | "students"
+  | "groups"
+  | "courses"
+  | "attendance"
+  | "payments"
+  | "leads"
+  | "staff"
+  | "schedule"
+  | "reports"
+  | "access"
+  | "certificates"
+  | "hub"
+  | "tasks"
+  | "grades"
+  | "debts"
+  | "settings";
 type Student = { id:string; full_name:string; email:string|null; phone:string|null; login_username:string|null; crm_login_enabled:boolean; hub_login_enabled:boolean; role:string; rating_points:number; status:string; city:string|null; birth_date:string|null; address:string|null; started_at:string|null; notes:string|null; avatar_url:string|null };type Group = { id:string; name:string; course:string; level:string; capacity:number; active:boolean };
 type Course = { id:string; name:string; code:string|null; duration_months:number; price:number; active:boolean };
 type Lead = { id:string; application_number:string; full_name:string; email:string|null; phone:string; course:string; status:string; created_at:string; admin_note:string|null };
@@ -36,11 +53,124 @@ export default function Admin(){
  if(checking)return <div className="page-loader"><div className="loader-mark">N</div><span>CRM tekshirilmoqda...</span></div>;
  if(!session)return <main className="auth-page"><div className="auth-shell admin-login"><a href="/" className="logo auth-logo">NOVA <span>ACADEMY</span></a><div className="auth-card"><div className="auth-card-icon"><ShieldCheck/></div><div className="eyebrow">SECURE CRM ACCESS</div><h2>Admin CRM</h2><p className="muted">CRM'ga kirish uchun mavjud admin hisobingizdan foydalaning.</p><a className="btn primary btn-lg" style={{width:"100%",marginTop:18}} href="/login">Login sahifasiga o‘tish <ArrowUpRight size={16}/></a></div></div></main>;
  const newLeads=leads.filter(x=>x.status==="new").length; const month=new Date().toISOString().slice(0,7); const revenue=payments.filter(x=>x.status==="paid"&&x.payment_date.startsWith(month)).reduce((a,x)=>a+Number(x.amount),0); const debtors=0; const filtered=students.filter(s=>!query||`${s.full_name} ${s.phone||""} ${s.email||""} ${s.city||""}`.toLowerCase().includes(query.toLowerCase()));
- const nav:[Tab,string,any][]=[["overview","Dashboard",LayoutDashboard],["students","O‘quvchilar",Users],["groups","Guruhlar",Users],["courses","Kurslar",BookOpen],["attendance","Davomat",ClipboardCheck],["payments","To‘lovlar",CreditCard],["leads","Arizalar",ClipboardList],["staff","Mentorlar / xodimlar",ShieldCheck],["schedule","Jadval",CalendarDays],["reports","Hisobotlar",DollarSign],["access","RBAC / Ruxsatlar",Settings2]];
- return <main className="crm-page"><header className="crm-nav"><div className="crm-brand"><a className="logo" href="/">NOVA <span>ACADEMY</span></a><b>PRO CRM</b></div><div className="crm-actions"><span className="admin-online"><i/> Online</span><button className="icon-btn" onClick={load} disabled={loading}><RefreshCw size={16}/></button><button className="btn" onClick={logout}><LogOut size={15}/> Chiqish</button></div></header><div className="crm-layout"><aside className="crm-sidebar"><div className="side-label">NOVA MANAGEMENT</div>{nav.map(([id,label,Icon])=><button key={id} className={`side-link ${tab===id?"active":""}`} onClick={()=>setTab(id)}><Icon/><span>{label}</span>{id==="leads"&&newLeads>0?<em>{newLeads}</em>:<ChevronRight size={14}/>}</button>)}<div className="crm-sidebar-foot"><span>NOVA ACADEMY</span><small>Learning · CRM · Growth</small></div></aside><section className="crm-content">{error&&<div className="crm-alert">{error}<button onClick={()=>setError("")}><X size={15}/></button></div>}
+ const navGroups:{
+  label:string;
+  items:[Tab,string,any][];
+ }[]=[
+  {
+   label:"COMMAND CENTER",
+   items:[
+    ["overview","Dashboard",LayoutDashboard]
+   ]
+  },
+  {
+   label:"O‘QUVCHILAR",
+   items:[
+    ["students","Barcha o‘quvchilar",Users],
+    ["groups","Guruhlar",Users]
+   ]
+  },
+  {
+   label:"TA’LIM",
+   items:[
+    ["courses","Kurslar",BookOpen],
+    ["schedule","Dars jadvali",CalendarDays],
+    ["attendance","Davomat",ClipboardCheck],
+    ["grades","Baholar",Check],
+    ["tasks","Topshiriqlar",ClipboardList]
+   ]
+  },
+  {
+   label:"STUDENT HUB",
+   items:[
+    ["hub","HUB boshqaruvi",LayoutDashboard]
+   ]
+  },
+  {
+   label:"SERTIFIKATLAR",
+   items:[
+    ["certificates","Barcha sertifikatlar",ShieldCheck]
+   ]
+  },
+  {
+   label:"MOLIYA",
+   items:[
+    ["payments","To‘lovlar",CreditCard],
+    ["debts","Qarzdorlik",DollarSign],
+    ["reports","Hisobotlar",DollarSign]
+   ]
+  },
+  {
+   label:"ADMISSION",
+   items:[
+    ["leads","Arizalar / Leads",ClipboardList]
+   ]
+  },
+  {
+   label:"JAMOA",
+   items:[
+    ["staff","Mentorlar / xodimlar",Users]
+   ]
+  },
+  {
+   label:"TIZIM",
+   items:[
+    ["access","RBAC / Ruxsatlar",Settings2],
+    ["settings","Sozlamalar",Settings2]
+   ]
+  }
+ ];
+ return <main className="crm-page"><header className="crm-nav"><div className="crm-brand"><a className="logo" href="/">NOVA <span>ACADEMY</span></a><b>PRO CRM</b></div><div className="crm-actions"><span className="admin-online"><i/> Online</span><button className="icon-btn" onClick={load} disabled={loading}><RefreshCw size={16}/></button><button className="btn" onClick={logout}><LogOut size={15}/> Chiqish</button></div></header><div className="crm-layout"><aside className="crm-sidebar">
+ <div className="side-label">NOVA MANAGEMENT</div>
+
+ {navGroups.map(group=>(
+  <div className="side-group" key={group.label}>
+   <div className="side-group-label">{group.label}</div>
+
+   {group.items.map(([id,label,Icon])=>(
+    <button
+     key={`${group.label}-${id}`}
+     className={`side-link ${tab===id?"active":""}`}
+     onClick={()=>setTab(id)}
+    >
+     <Icon/>
+     <span>{label}</span>
+     {id==="leads"&&newLeads>0
+      ?<em>{newLeads}</em>
+      :<ChevronRight size={14}/>}
+    </button>
+   ))}
+  </div>
+ ))}
+
+ <div className="crm-sidebar-foot">
+  <span>NOVA ACADEMY</span>
+  <small>Learning · CRM · Growth</small>
+ </div>
+</aside><section className="crm-content">{error&&<div className="crm-alert">{error}<button onClick={()=>setError("")}><X size={15}/></button></div>}
+ {tab==="grades"&&<ModulePlaceholder title="Baholar" eyebrow="ACADEMIC MANAGEMENT" description="O‘quvchilarning baholari, natijalari va akademik progressini boshqarish moduli."/>}
+ {tab==="tasks"&&<ModulePlaceholder title="Topshiriqlar" eyebrow="TASK MANAGEMENT" description="Topshiriqlarni yaratish, topshirish va tekshirish jarayonlarini boshqarish moduli."/>}
+ {tab==="hub"&&<ModulePlaceholder title="Student HUB" eyebrow="STUDENT HUB CONTROL" description="Student HUB, modul ruxsatlari va o‘quvchi portalini boshqarish markazi."/>}
+ {tab==="certificates"&&<ModulePlaceholder title="Sertifikatlar" eyebrow="CERTIFICATE MANAGEMENT" description="Sertifikatlarni yaratish, berish, tahrirlash va bekor qilish boshqaruvi."/>}
+ {tab==="debts"&&<ModulePlaceholder title="Qarzdorlik" eyebrow="FINANCE CONTROL" description="O‘quvchilarning to‘lov holati va qarzdorliklarini nazorat qilish moduli."/>}
+ {tab==="settings"&&<ModulePlaceholder title="Sozlamalar" eyebrow="SYSTEM SETTINGS" description="NOVA ACADEMY CRM tizim sozlamalari va konfiguratsiyasi."/>}
+
  {tab==="overview"&&<Overview students={students} groups={groups} leads={leads} payments={payments} attendance={attendance} revenue={revenue} newLeads={newLeads} onStudents={()=>setTab("students")} onLeads={()=>setTab("leads")}/>} 
  {tab==="students"&&<Students students={filtered} query={query} setQuery={setQuery} onAdd={()=>setShowCreate(true)} onOpen={(s)=>{setSelected(s);setShowStudent(true)}}/>}
  {tab==="groups"&&<Groups groups={groups} students={students} courses={courses} enrollments={enrollments} onAdd={()=>setShowGroup(true)} onRefresh={load}/>} {tab==="courses"&&<Courses courses={courses} onAdd={()=>setShowCourse(true)}/>} {tab==="attendance"&&<AttendancePage rows={attendance} students={students} groups={groups} onAdd={()=>setShowAttendance(true)}/>} {tab==="payments"&&<PaymentsPage rows={payments} students={students} onAdd={()=>setShowPayment(true)}/>} {tab==="leads"&&<Leads leads={leads} groups={groups} onRefresh={load}/>} {tab==="staff"&&<Staff staff={staff} onRefresh={load}/>} {tab==="schedule"&&<Schedule events={events} groups={groups} staff={staff}/>} {tab==="reports"&&<Reports students={students} groups={groups} payments={payments} attendance={attendance}/>} {tab==="access"&&<Access staff={staff}/>}</section></div>{showCreate&&<CreateStudent courses={courses} groups={groups} onClose={()=>setShowCreate(false)} onSaved={async()=>{setShowCreate(false);await load()}}/>}{showStudent&&selected&&<StudentDrawer student={selected} groups={groups} courses={courses} onClose={()=>setShowStudent(false)} onSaved={async()=>{setShowStudent(false);await load()}}/>}{showGroup&&<CreateGroup courses={courses} onClose={()=>setShowGroup(false)} onSaved={async()=>{setShowGroup(false);await load()}}/>}{showCourse&&<CreateCourse onClose={()=>setShowCourse(false)} onSaved={async()=>{setShowCourse(false);await load()}}/>}{showPayment&&<CreatePayment students={students} courses={courses} onClose={()=>setShowPayment(false)} onSaved={async()=>{setShowPayment(false);await load()}}/>}{showAttendance&&<CreateAttendance students={students} groups={groups} onClose={()=>setShowAttendance(false)} onSaved={async()=>{setShowAttendance(false);await load()}}/>}</main>
+}
+
+function ModulePlaceholder({title,eyebrow,description}:{title:string;eyebrow:string;description:string}){
+ return <div>
+  <Head eyebrow={eyebrow} title={`${title}.`} sub={description}/>
+  <div className="crm-panel" style={{padding:28}}>
+   <div className="empty-state">
+    <ShieldCheck size={28}/>
+    <h3>{title} moduli</h3>
+    <p className="muted">Bu bo‘limning to‘liq boshqaruv funksiyalari keyingi bosqichda ulanadi.</p>
+   </div>
+  </div>
+ </div>
 }
 
 function Head({eyebrow,title,sub,action}:{eyebrow:string;title:string;sub?:string;action?:React.ReactNode}){return <div className="crm-title"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{sub&&<p className="muted">{sub}</p>}</div>{action}</div>}
@@ -1805,6 +1935,12 @@ function StudentDrawer({student,groups,courses,onClose,onSaved}:{student:Student
  const [selectedGroup,setSelectedGroup]=useState("");
  const [archiving,setArchiving]=useState(false);
 
+ const [activeTab,setActiveTab]=useState("overview");
+ const [detail,setDetail]=useState<any>(null);
+ const [loadingDetail,setLoadingDetail]=useState(true);
+ const [detailError,setDetailError]=useState("");
+ const [permissionSaving,setPermissionSaving]=useState(false);
+
  const availableGroups=groups.filter(g=>g.active!==false&&(!selectedCourse||g.course===selectedCourse));
 
  useEffect(()=>{
@@ -1821,6 +1957,61 @@ function StudentDrawer({student,groups,courses,onClose,onSaved}:{student:Student
    setSelectedGroup("");
   }
  },[selectedCourse]);
+
+ useEffect(()=>{
+  let cancelled=false;
+
+  async function loadDetail(){
+   setLoadingDetail(true);
+   setDetailError("");
+
+   try{
+    const response=await fetch(
+     "/api/admin/student-detail?student_id="+encodeURIComponent(student.id),
+     {cache:"no-store"}
+    );
+
+    const result=await response.json();
+
+    if(!response.ok){
+     throw new Error(result.error||"Student ma’lumotlarini yuklashda xatolik.");
+    }
+
+    if(!cancelled){
+     setDetail(result);
+    }
+   }catch(error:any){
+    if(!cancelled){
+     setDetailError(error?.message||"Ma’lumotlarni yuklashda xatolik.");
+    }
+   }finally{
+    if(!cancelled){
+     setLoadingDetail(false);
+    }
+   }
+  }
+
+  loadDetail();
+
+  return ()=>{
+   cancelled=true;
+  };
+ },[student.id]);
+
+ async function reloadDetail(){
+  try{
+   const response=await fetch(
+    "/api/admin/student-detail?student_id="+encodeURIComponent(student.id),
+    {cache:"no-store"}
+   );
+
+   const result=await response.json();
+
+   if(response.ok){
+    setDetail(result);
+   }
+  }catch{}
+ }
 
  async function save(){
   if(!f.full_name.trim()){
@@ -1886,6 +2077,7 @@ function StudentDrawer({student,groups,courses,onClose,onSaved}:{student:Student
    }
 
    setPassword("");
+   await reloadDetail();
    await onSaved();
 
   }catch(error:any){
@@ -1893,6 +2085,52 @@ function StudentDrawer({student,groups,courses,onClose,onSaved}:{student:Student
   }finally{
    setSaving(false);
   }
+ }
+
+ async function savePermissions(){
+  if(!detail?.settings) return;
+
+  setPermissionSaving(true);
+
+  try{
+   const response=await fetch("/api/admin/manage",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+     action:"student_hub_permissions",
+     student_id:f.id,
+     ...detail.settings
+    })
+   });
+
+   const result=await response.json();
+
+   if(!response.ok){
+    alert(result.error||"HUB ruxsatlarini saqlashda xatolik.");
+    return;
+   }
+
+   setDetail((current:any)=>current?{
+    ...current,
+    settings:result.settings
+   }:current);
+
+   alert("NOVA HUB ruxsatlari saqlandi.");
+  }catch(error:any){
+   alert(error?.message||"Server bilan bog‘lanishda xatolik.");
+  }finally{
+   setPermissionSaving(false);
+  }
+ }
+
+ function setPermission(key:string,value:boolean){
+  setDetail((current:any)=>current?{
+   ...current,
+   settings:{
+    ...current.settings,
+    [key]:value
+   }
+  }:current);
  }
 
  async function archiveStudent(){
@@ -1928,6 +2166,92 @@ function StudentDrawer({student,groups,courses,onClose,onSaved}:{student:Student
   }
  }
 
+ const summary=detail?.summary||{
+  course_price:0,
+  paid:0,
+  balance:0,
+  attendance_percent:0,
+  grades_count:0,
+  tasks_count:0,
+  completed_tasks:0
+ };
+
+ const settings=detail?.settings||{
+  hub_enabled:false,
+  dashboard_enabled:false,
+  attendance_enabled:false,
+  payments_enabled:false,
+  grades_enabled:false,
+  tasks_enabled:false,
+  certificates_enabled:false,
+  schedule_enabled:false,
+  activity_enabled:false
+ };
+
+ const tabs=[
+  ["overview","Umumiy"],
+  ["attendance","Davomat"],
+  ["payments","To‘lovlar"],
+  ["grades","Baholar"],
+  ["tasks","Topshiriqlar"],
+  ["certificates","Sertifikat"],
+  ["activity","Activity"],
+  ["access","HUB ruxsatlari"]
+ ];
+
+ function money(value:number){
+  return new Intl.NumberFormat("uz-UZ").format(Number(value||0))+" so‘m";
+ }
+
+ function date(value:string|null|undefined){
+  if(!value) return "—";
+  return new Date(value).toLocaleDateString("uz-UZ");
+ }
+
+ function statusLabel(value:string){
+  const map:any={
+   present:"Keldi",
+   absent:"Kelmadi",
+   late:"Kechikdi",
+   excused:"Sababli",
+   paid:"To‘langan",
+   pending:"Kutilmoqda",
+   cancelled:"Bekor qilingan",
+   completed:"Bajarilgan",
+   pending_task:"Kutilmoqda",
+   active:"Faol",
+   frozen:"Muzlatilgan",
+   removed:"Chiqarilgan"
+  };
+  return map[value]||value||"—";
+ }
+
+ function Toggle({label,description,value,onChange}:{label:string;description:string;value:boolean;onChange:(value:boolean)=>void}){
+  return <label style={{
+   display:"flex",
+   alignItems:"center",
+   justifyContent:"space-between",
+   gap:14,
+   padding:"13px 14px",
+   border:"1px solid rgba(255,255,255,.08)",
+   borderRadius:12,
+   cursor:"pointer"
+  }}>
+   <span>
+    <strong>{label}</strong>
+    <small style={{display:"block",opacity:.58,marginTop:3}}>
+     {description}
+    </small>
+   </span>
+
+   <input
+    type="checkbox"
+    checked={value}
+    onChange={e=>onChange(e.target.checked)}
+   />
+  </label>;
+ }
+
  return <Modal title={f.full_name} onClose={onClose}>
 
   <div className="profile-hero">
@@ -1936,265 +2260,550 @@ function StudentDrawer({student,groups,courses,onClose,onSaved}:{student:Student
    </div>
 
    <div>
-    <div className="eyebrow">STUDENT PROFILE</div>
+    <div className="eyebrow">STUDENT 360 CRM</div>
     <h3>{f.full_name}</h3>
-    <p>{f.role} · {f.status}</p>
+    <p>{f.role} · {statusLabel(f.status)}</p>
    </div>
   </div>
 
-  <div className="crm-panel" style={{marginTop:16}}>
-   <div className="eyebrow">PERSONAL INFORMATION</div>
-   <h3>Shaxsiy ma’lumotlar</h3>
-
-   <div className="drawer-grid">
-    <FormInput
-     label="Ism va familiya"
-     value={f.full_name}
-     onChange={v=>setF({...f,full_name:v})}
-     required
-    />
-
-    <FormInput
-     label="Telefon"
-     value={f.phone||""}
-     onChange={v=>setF({...f,phone:v})}
-    />
-
-    <FormInput
-     label="Email"
-     value={f.email||""}
-     onChange={v=>setF({...f,email:v})}
-    />
-
-    <FormInput
-     label="Tug‘ilgan sana"
-     type="date"
-     value={f.birth_date||""}
-     onChange={v=>setF({...f,birth_date:v})}
-    />
-
-    <FormInput
-     label="Shahar"
-     value={f.city||""}
-     onChange={v=>setF({...f,city:v})}
-    />
-
-    <FormSelect
-     label="Holat"
-     value={f.status||"active"}
-     options={[
-      ["active","Faol"],
-      ["frozen","Muzlatilgan"],
-      ["completed","Tugatgan"],
-      ["removed","Chiqarilgan"]
-     ]}
-     onChange={v=>setF({...f,status:v})}
-    />
-   </div>
-
-   <div className="field" style={{marginTop:14}}>
-    <label>Manzil</label>
-    <input
-     value={f.address||""}
-     onChange={e=>setF({...f,address:e.target.value})}
-    />
-   </div>
-
-   <div className="field" style={{marginTop:14}}>
-    <label>Izohlar</label>
-    <textarea
-     value={f.notes||""}
-     onChange={e=>setF({...f,notes:e.target.value})}
-    />
-   </div>
+  <div style={{
+   display:"grid",
+   gridTemplateColumns:"repeat(4,minmax(0,1fr))",
+   gap:10,
+   marginTop:16
+  }}>
+   {[
+    ["Davomat",summary.attendance_percent+"%"],
+    ["To‘langan",money(summary.paid)],
+    ["Qoldiq",money(summary.balance)],
+    ["Topshiriqlar",summary.completed_tasks+"/"+summary.tasks_count]
+   ].map(([label,value])=>
+    <div key={label} className="crm-panel" style={{padding:14}}>
+     <small style={{opacity:.58}}>{label}</small>
+     <strong style={{display:"block",fontSize:18,marginTop:5}}>{value}</strong>
+    </div>
+   )}
   </div>
 
-  <div className="crm-panel" style={{marginTop:16}}>
-   <div className="eyebrow">ACCOUNT ACCESS</div>
-   <h3>Hisob va kirish huquqlari</h3>
-
-   <div className="drawer-grid">
-    <FormInput
-     label="NOVA Username"
-     value={f.login_username||""}
-     onChange={v=>setF({
-      ...f,
-      login_username:v.toLowerCase().replace(/\\s+/g,"")
-     })}
-     placeholder="masalan: hoshimhon"
-     required
-    />
-
-    <FormInput
-     label="Yangi parol"
-     type="password"
-     value={password}
-     onChange={setPassword}
-     placeholder="O‘zgartirish kerak bo‘lsa kiriting"
-    />
-   </div>
-
-   <div style={{
-    display:"grid",
-    gap:10,
-    marginTop:14
-   }}>
-    <label style={{
-     display:"flex",
-     alignItems:"center",
-     gap:10,
-     cursor:"pointer"
-    }}>
-     <input
-      type="checkbox"
-      checked={f.hub_login_enabled!==false}
-      onChange={e=>setF({
-       ...f,
-       hub_login_enabled:e.target.checked
-      })}
-     />
-     <span>
-      <strong>NOVA HUB kirishi</strong>
-      <small style={{display:"block",opacity:.65}}>
-       O‘quvchi HUB portaliga kira oladi
-      </small>
-     </span>
-    </label>
-
-    <label style={{
-     display:"flex",
-     alignItems:"center",
-     gap:10,
-     cursor:"pointer"
-    }}>
-     <input
-      type="checkbox"
-      checked={f.crm_login_enabled!==false}
-      onChange={e=>setF({
-       ...f,
-       crm_login_enabled:e.target.checked
-      })}
-     />
-     <span>
-      <strong>CRM Login</strong>
-      <small style={{display:"block",opacity:.65}}>
-       O‘quvchi uchun CRM hisobiga kirish ruxsati
-      </small>
-     </span>
-    </label>
-   </div>
+  <div style={{
+   display:"flex",
+   gap:6,
+   overflowX:"auto",
+   marginTop:18,
+   paddingBottom:4
+  }}>
+   {tabs.map(([key,label])=>
+    <button
+     key={key}
+     type="button"
+     className={activeTab===key?"btn primary":"small-action"}
+     onClick={()=>setActiveTab(key)}
+     style={{whiteSpace:"nowrap"}}
+    >
+     {label}
+    </button>
+   )}
   </div>
 
-  <div className="crm-panel" style={{marginTop:16}}>
-   <div className="eyebrow">ACADEMIC MANAGEMENT</div>
-   <h3>Kurs va guruh</h3>
+  {loadingDetail&&
+   <div className="crm-panel" style={{marginTop:16}}>
+    <p>Student ma’lumotlari yuklanmoqda...</p>
+   </div>
+  }
 
-   <div className="drawer-grid">
+  {detailError&&
+   <div className="crm-alert" style={{marginTop:16}}>
+    {detailError}
+   </div>
+  }
 
-    <div className="field">
-     <label>Kurs</label>
+  {!loadingDetail&&detail&&!detailError&&activeTab==="overview"&&
+   <>
+    <div className="crm-panel" style={{marginTop:16}}>
+     <div className="eyebrow">PERSONAL INFORMATION</div>
+     <h3>Shaxsiy ma’lumotlar</h3>
 
-     <select
-      value={selectedCourse}
-      onChange={e=>{
-       setSelectedCourse(e.target.value);
-       setSelectedGroup("");
-      }}
-     >
-      <option value="">Kursni tanlang</option>
+     <div className="drawer-grid">
+      <FormInput
+       label="Ism va familiya"
+       value={f.full_name}
+       onChange={v=>setF({...f,full_name:v})}
+       required
+      />
 
-      {courses
-       .filter(c=>c.active!==false)
-       .map(c=>
-        <option key={c.id} value={c.name}>
-         {c.name}
+      <FormInput
+       label="Telefon"
+       value={f.phone||""}
+       onChange={v=>setF({...f,phone:v})}
+      />
+
+      <FormInput
+       label="Email"
+       value={f.email||""}
+       onChange={v=>setF({...f,email:v})}
+      />
+
+      <FormInput
+       label="Tug‘ilgan sana"
+       type="date"
+       value={f.birth_date||""}
+       onChange={v=>setF({...f,birth_date:v})}
+      />
+
+      <FormInput
+       label="Shahar"
+       value={f.city||""}
+       onChange={v=>setF({...f,city:v})}
+      />
+
+      <FormSelect
+       label="Holat"
+       value={f.status||"active"}
+       options={[
+        ["active","Faol"],
+        ["frozen","Muzlatilgan"],
+        ["completed","Tugatgan"],
+        ["removed","Chiqarilgan"]
+       ]}
+       onChange={v=>setF({...f,status:v})}
+      />
+     </div>
+
+     <div className="field" style={{marginTop:14}}>
+      <label>Manzil</label>
+      <input
+       value={f.address||""}
+       onChange={e=>setF({...f,address:e.target.value})}
+      />
+     </div>
+
+     <div className="field" style={{marginTop:14}}>
+      <label>Izohlar</label>
+      <textarea
+       value={f.notes||""}
+       onChange={e=>setF({...f,notes:e.target.value})}
+      />
+     </div>
+    </div>
+
+    <div className="crm-panel" style={{marginTop:16}}>
+     <div className="eyebrow">ACCOUNT ACCESS</div>
+     <h3>Hisob va kirish</h3>
+
+     <div className="drawer-grid">
+      <FormInput
+       label="NOVA Username"
+       value={f.login_username||""}
+       onChange={v=>setF({
+        ...f,
+        login_username:v.toLowerCase().replace(/\s+/g,"")
+       })}
+       placeholder="masalan: hoshimhon"
+       required
+      />
+
+      <FormInput
+       label="Yangi parol"
+       type="password"
+       value={password}
+       onChange={setPassword}
+       placeholder="O‘zgartirish kerak bo‘lsa kiriting"
+      />
+     </div>
+
+     <div style={{display:"grid",gap:10,marginTop:14}}>
+      <Toggle
+       label="NOVA HUB kirishi"
+       description="O‘quvchi HUB portaliga kira oladi"
+       value={f.hub_login_enabled!==false}
+       onChange={value=>setF({...f,hub_login_enabled:value})}
+      />
+
+      <Toggle
+       label="CRM Login"
+       description="O‘quvchi CRM hisobiga kirish huquqi"
+       value={f.crm_login_enabled!==false}
+       onChange={value=>setF({...f,crm_login_enabled:value})}
+      />
+     </div>
+    </div>
+
+    <div className="crm-panel" style={{marginTop:16}}>
+     <div className="eyebrow">ACADEMIC MANAGEMENT</div>
+     <h3>Kurs va guruh</h3>
+
+     <div className="drawer-grid">
+      <div className="field">
+       <label>Kurs</label>
+       <select
+        value={selectedCourse}
+        onChange={e=>{
+         setSelectedCourse(e.target.value);
+         setSelectedGroup("");
+        }}
+       >
+        <option value="">Kursni tanlang</option>
+        {courses.filter(c=>c.active!==false).map(c=>
+         <option key={c.id} value={c.name}>{c.name}</option>
+        )}
+       </select>
+      </div>
+
+      <div className="field">
+       <label>Guruh</label>
+       <select
+        value={selectedGroup}
+        onChange={e=>setSelectedGroup(e.target.value)}
+        disabled={!selectedCourse}
+       >
+        <option value="">
+         {selectedCourse?"Guruhni tanlang":"Avval kursni tanlang"}
         </option>
+        {availableGroups.map(g=>
+         <option key={g.id} value={g.id}>
+          {g.name} — {g.level}
+         </option>
+        )}
+       </select>
+      </div>
+     </div>
+
+     {selectedGroup&&
+      <div className="crm-alert" style={{marginTop:14}}>
+       O‘quvchi tanlangan guruhga saqlash vaqtida biriktiriladi.
+      </div>
+     }
+    </div>
+
+    <div className="crm-panel" style={{marginTop:16}}>
+     <div className="eyebrow">ENROLLMENTS</div>
+     <h3>Kurslar</h3>
+
+     {detail.enrollments.length===0?
+      <p className="muted">Hozircha kursga biriktirilmagan.</p>:
+      <div style={{display:"grid",gap:8}}>
+       {detail.enrollments.map((item:any)=>
+        <div key={item.id} style={{
+         padding:12,
+         border:"1px solid rgba(255,255,255,.08)",
+         borderRadius:10
+        }}>
+         <strong>{item.courses?.name||"Kurs"}</strong>
+         <div className="muted">
+          {item.groups?.name||"Guruh yo‘q"} · {item.status||"active"}
+         </div>
+        </div>
        )}
-     </select>
+      </div>
+     }
     </div>
+   </>
+  }
 
-    <div className="field">
-     <label>Guruh</label>
+  {!loadingDetail&&detail&&activeTab==="attendance"&&
+   <div className="crm-panel" style={{marginTop:16}}>
+    <div className="eyebrow">ATTENDANCE</div>
+    <h3>Davomat tarixi</h3>
 
-     <select
-      value={selectedGroup}
-      onChange={e=>setSelectedGroup(e.target.value)}
-      disabled={!selectedCourse}
-     >
-      <option value="">
-       {selectedCourse?"Guruhni tanlang":"Avval kursni tanlang"}
-      </option>
-
-      {availableGroups.map(g=>
-       <option key={g.id} value={g.id}>
-        {g.name} — {g.level}
-       </option>
+    {detail.attendance.length===0?
+     <p className="muted">Davomat yozuvlari mavjud emas.</p>:
+     <div style={{display:"grid",gap:8}}>
+      {detail.attendance.map((item:any)=>
+       <div key={item.id} style={{
+        display:"grid",
+        gridTemplateColumns:"120px 1fr auto",
+        gap:12,
+        alignItems:"center",
+        padding:"11px 12px",
+        borderBottom:"1px solid rgba(255,255,255,.06)"
+       }}>
+        <strong>{date(item.attendance_date)}</strong>
+        <span>{item.note||"Izoh yo‘q"}</span>
+        <span>{statusLabel(item.status)}</span>
+       </div>
       )}
-     </select>
-    </div>
-
+     </div>
+    }
    </div>
+  }
 
-   {selectedGroup&&
-    <div className="crm-alert" style={{marginTop:14}}>
-     O‘quvchi tanlangan guruhga saqlash vaqtida biriktiriladi.
+  {!loadingDetail&&detail&&activeTab==="payments"&&
+   <div className="crm-panel" style={{marginTop:16}}>
+    <div className="eyebrow">FINANCE</div>
+    <h3>To‘lovlar</h3>
+
+    <div className="drawer-grid" style={{marginBottom:16}}>
+     <div>
+      <small className="muted">Kurs qiymati</small>
+      <h3>{money(summary.course_price)}</h3>
+     </div>
+     <div>
+      <small className="muted">To‘langan</small>
+      <h3>{money(summary.paid)}</h3>
+     </div>
+     <div>
+      <small className="muted">Qoldiq</small>
+      <h3>{money(summary.balance)}</h3>
+     </div>
     </div>
-   }
-  </div>
 
-  <div className="crm-panel" style={{marginTop:16}}>
-   <div className="eyebrow">ACCOUNT ACCESS</div>
-   <h3>Login va parol</h3>
+    {detail.payments.length===0?
+     <p className="muted">To‘lovlar mavjud emas.</p>:
+     <div style={{display:"grid",gap:8}}>
+      {detail.payments.map((item:any)=>
+       <div key={item.id} style={{
+        display:"grid",
+        gridTemplateColumns:"120px 1fr 120px",
+        gap:12,
+        alignItems:"center",
+        padding:"11px 12px",
+        borderBottom:"1px solid rgba(255,255,255,.06)"
+       }}>
+        <strong>{date(item.payment_date)}</strong>
+        <span>{item.method||"—"} · {statusLabel(item.status)}</span>
+        <strong>{money(Number(item.amount||0))}</strong>
+       </div>
+      )}
+     </div>
+    }
+   </div>
+  }
 
-   <div className="drawer-grid">
+  {!loadingDetail&&detail&&activeTab==="grades"&&
+   <div className="crm-panel" style={{marginTop:16}}>
+    <div className="eyebrow">ACADEMIC</div>
+    <h3>Baholar</h3>
 
-    <div className="field">
-     <label>Login / telefon</label>
-     <input
-      value={f.phone||f.email||""}
-      readOnly
+    {detail.grades.length===0?
+     <p className="muted">Baholar mavjud emas.</p>:
+     <div style={{display:"grid",gap:8}}>
+      {detail.grades.map((item:any)=>
+       <div key={item.id} style={{
+        display:"grid",
+        gridTemplateColumns:"1fr 1fr 80px 120px",
+        gap:12,
+        alignItems:"center",
+        padding:"11px 12px",
+        borderBottom:"1px solid rgba(255,255,255,.06)"
+       }}>
+        <strong>{item.subject||"—"}</strong>
+        <span>{item.assessment||"—"}</span>
+        <strong>{item.score ?? "—"}</strong>
+        <span>{date(item.created_at)}</span>
+       </div>
+      )}
+     </div>
+    }
+   </div>
+  }
+
+  {!loadingDetail&&detail&&activeTab==="tasks"&&
+   <div className="crm-panel" style={{marginTop:16}}>
+    <div className="eyebrow">TASKS</div>
+    <h3>Topshiriqlar</h3>
+
+    {detail.tasks.length===0?
+     <p className="muted">Topshiriqlar mavjud emas.</p>:
+     <div style={{display:"grid",gap:10}}>
+      {detail.tasks.map((item:any)=>
+       <div key={item.id} style={{
+        padding:13,
+        border:"1px solid rgba(255,255,255,.08)",
+        borderRadius:11
+       }}>
+        <div style={{
+         display:"flex",
+         justifyContent:"space-between",
+         gap:10
+        }}>
+         <strong>{item.title}</strong>
+         <span>{statusLabel(item.status)}</span>
+        </div>
+
+        <div className="muted" style={{marginTop:5}}>
+         {item.subject||"Umumiy"} · Muddat: {date(item.due_date||item.due_at)}
+        </div>
+
+        {item.description&&
+         <p style={{marginTop:8}}>{item.description}</p>
+        }
+
+        {item.score!==null&&item.score!==undefined&&
+         <small>Ball: {item.score}</small>
+        }
+
+        {item.mentor_note&&
+         <div className="crm-alert" style={{marginTop:8}}>
+          Mentor: {item.mentor_note}
+         </div>
+        }
+       </div>
+      )}
+     </div>
+    }
+   </div>
+  }
+
+  {!loadingDetail&&detail&&activeTab==="certificates"&&
+   <div className="crm-panel" style={{marginTop:16}}>
+    <div className="eyebrow">CERTIFICATES</div>
+    <h3>Sertifikatlar</h3>
+
+    {detail.certificates.length===0?
+     <p className="muted">Sertifikat mavjud emas.</p>:
+     <div style={{display:"grid",gap:10}}>
+      {detail.certificates.map((item:any)=>
+       <div key={item.id} style={{
+        padding:13,
+        border:"1px solid rgba(255,255,255,.08)",
+        borderRadius:11
+       }}>
+        <strong>{item.title}</strong>
+        <div className="muted">
+         {item.course_name||"—"} · {date(item.issued_at)}
+        </div>
+        {item.certificate_no&&
+         <small>№ {item.certificate_no}</small>
+        }
+        {item.file_url&&
+         <div style={{marginTop:8}}>
+          <a href={item.file_url} target="_blank" rel="noreferrer">
+           Sertifikat faylini ochish
+          </a>
+         </div>
+        }
+       </div>
+      )}
+     </div>
+    }
+   </div>
+  }
+
+  {!loadingDetail&&detail&&activeTab==="activity"&&
+   <div className="crm-panel" style={{marginTop:16}}>
+    <div className="eyebrow">CRM ACTIVITY</div>
+    <h3>Faoliyat tarixi</h3>
+
+    {detail.activity.length===0?
+     <p className="muted">Activity mavjud emas.</p>:
+     <div style={{display:"grid",gap:9}}>
+      {detail.activity.map((item:any)=>
+       <div key={item.id} style={{
+        padding:12,
+        borderLeft:"2px solid rgba(255,255,255,.16)"
+       }}>
+        <strong>{item.action||"Activity"}</strong>
+        <div>{item.description||"—"}</div>
+        <small className="muted">{date(item.created_at)}</small>
+       </div>
+      )}
+     </div>
+    }
+   </div>
+  }
+
+  {!loadingDetail&&detail&&activeTab==="access"&&
+   <div className="crm-panel" style={{marginTop:16}}>
+    <div className="eyebrow">NOVA HUB ACCESS CONTROL</div>
+    <h3>Student HUB ruxsatlari</h3>
+
+    <p className="muted" style={{marginBottom:14}}>
+     O‘quvchi HUB ichida qaysi bo‘limlarni ko‘rishi mumkinligini shu yerda boshqaring.
+    </p>
+
+    <div style={{display:"grid",gap:9}}>
+     <Toggle
+      label="NOVA HUB"
+      description="Umumiy HUB kirishi"
+      value={settings.hub_enabled===true}
+      onChange={value=>setPermission("hub_enabled",value)}
+     />
+
+     <Toggle
+      label="Dashboard"
+      description="HUB bosh sahifasi"
+      value={settings.dashboard_enabled===true}
+      onChange={value=>setPermission("dashboard_enabled",value)}
+     />
+
+     <Toggle
+      label="Davomat"
+      description="O‘quvchi davomatini ko‘rish"
+      value={settings.attendance_enabled===true}
+      onChange={value=>setPermission("attendance_enabled",value)}
+     />
+
+     <Toggle
+      label="To‘lovlar"
+      description="To‘lovlar va balansni ko‘rish"
+      value={settings.payments_enabled===true}
+      onChange={value=>setPermission("payments_enabled",value)}
+     />
+
+     <Toggle
+      label="Baholar"
+      description="Baholar va akademik natijalar"
+      value={settings.grades_enabled===true}
+      onChange={value=>setPermission("grades_enabled",value)}
+     />
+
+     <Toggle
+      label="Topshiriqlar"
+      description="Topshiriqlar va mentor izohlari"
+      value={settings.tasks_enabled===true}
+      onChange={value=>setPermission("tasks_enabled",value)}
+     />
+
+     <Toggle
+      label="Sertifikatlar"
+      description="Sertifikatlarni ko‘rish"
+      value={settings.certificates_enabled===true}
+      onChange={value=>setPermission("certificates_enabled",value)}
+     />
+
+     <Toggle
+      label="Jadval"
+      description="Dars jadvalini ko‘rish"
+      value={settings.schedule_enabled===true}
+      onChange={value=>setPermission("schedule_enabled",value)}
+     />
+
+     <Toggle
+      label="Activity"
+      description="O‘quvchi faoliyat tarixini ko‘rish"
+      value={settings.activity_enabled===true}
+      onChange={value=>setPermission("activity_enabled",value)}
      />
     </div>
 
-    <FormInput
-     label="Yangi parol"
-     type="password"
-     value={password}
-     onChange={setPassword}
-     placeholder="O‘zgartirmasangiz bo‘sh qoldiring"
-    />
-
+    <button
+     type="button"
+     className="btn primary btn-lg"
+     style={{width:"100%",marginTop:16}}
+     onClick={savePermissions}
+     disabled={permissionSaving}
+    >
+     {permissionSaving?"Ruxsatlar saqlanmoqda...":"HUB ruxsatlarini saqlash"}
+     <Check size={16}/>
+    </button>
    </div>
-
-   <p className="muted" style={{marginTop:10}}>
-    Parol faqat yangi qiymat kiritilganda o‘zgartiriladi.
-   </p>
-  </div>
-
-  <div className="profile-tabs">
-   <span>Davomat</span>
-   <span>To‘lovlar</span>
-   <span>Baholar</span>
-   <span>Topshiriqlar</span>
-   <span>Sertifikat</span>
-   <span>Activity</span>
-  </div>
+  }
 
   <div className="lead-actions" style={{marginTop:18}}>
    <button
     className="btn primary btn-lg"
     style={{flex:1}}
     onClick={save}
-    disabled={saving||archiving}
+    disabled={saving||archiving||permissionSaving}
    >
-    {saving?"Saqlanmoqda...":"Barcha o‘zgarishlarni saqlash"}
+    {saving?"Saqlanmoqda...":"Profil o‘zgarishlarini saqlash"}
     <Check size={16}/>
    </button>
 
    <button
     className="small-action"
     onClick={archiveStudent}
-    disabled={saving||archiving}
+    disabled={saving||archiving||permissionSaving}
    >
     <Trash2 size={14}/>
     {archiving?"Arxivlanmoqda...":"Arxivlash"}

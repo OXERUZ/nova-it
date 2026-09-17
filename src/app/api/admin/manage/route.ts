@@ -609,6 +609,107 @@ export async function POST(req: Request) {
     // STUDENT STATUS
     // =========================
 
+    if (action === "student_hub_permissions") {
+      const {
+        student_id,
+        hub_enabled,
+        dashboard_enabled,
+        attendance_enabled,
+        payments_enabled,
+        grades_enabled,
+        tasks_enabled,
+        certificates_enabled,
+        schedule_enabled,
+        activity_enabled,
+      } = body;
+
+      if (!student_id) {
+        return NextResponse.json(
+          { error: "student_id kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { data: student, error: studentError } = await db
+        .from("profiles")
+        .select("id,role")
+        .eq("id", student_id)
+        .eq("role", "student")
+        .maybeSingle();
+
+      if (studentError) {
+        return NextResponse.json(
+          { error: studentError.message },
+          { status: 500 }
+        );
+      }
+
+      if (!student) {
+        return NextResponse.json(
+          { error: "O‘quvchi topilmadi." },
+          { status: 404 }
+        );
+      }
+
+      const { data, error } = await db
+        .from("student_hub_settings")
+        .upsert(
+          {
+            student_id,
+            hub_enabled: hub_enabled !== false,
+            dashboard_enabled: dashboard_enabled !== false,
+            attendance_enabled: attendance_enabled !== false,
+            payments_enabled: payments_enabled !== false,
+            grades_enabled: grades_enabled !== false,
+            tasks_enabled: tasks_enabled !== false,
+            certificates_enabled: certificates_enabled !== false,
+            schedule_enabled: schedule_enabled !== false,
+            activity_enabled: activity_enabled !== false,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "student_id" }
+        )
+        .select()
+        .single();
+
+      if (error) {
+        console.error("student_hub_permissions:", error);
+
+        return NextResponse.json(
+          { error: error.message },
+          { status: 500 }
+        );
+      }
+
+      try {
+        await db.from("crm_activity").insert({
+          actor_id: admin.profile.id,
+          entity_type: "student",
+          entity_id: student_id,
+          action: "hub_permissions_updated",
+          description: "Student HUB ruxsatlari yangilandi.",
+          metadata: {
+            hub_enabled: hub_enabled !== false,
+            dashboard_enabled: dashboard_enabled !== false,
+            attendance_enabled: attendance_enabled !== false,
+            payments_enabled: payments_enabled !== false,
+            grades_enabled: grades_enabled !== false,
+            tasks_enabled: tasks_enabled !== false,
+            certificates_enabled: certificates_enabled !== false,
+            schedule_enabled: schedule_enabled !== false,
+            activity_enabled: activity_enabled !== false,
+          },
+        });
+      } catch (activityError) {
+        console.warn("crm_activity:", activityError);
+      }
+
+      return NextResponse.json({
+        success: true,
+        settings: data,
+      });
+    }
+
     if (action === "student_assign_group") {
       const { student_id, group_id } = body;
 
