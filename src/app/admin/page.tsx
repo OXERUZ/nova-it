@@ -151,13 +151,463 @@ export default function Admin(){
  {tab==="grades"&&<ModulePlaceholder title="Baholar" eyebrow="ACADEMIC MANAGEMENT" description="O‘quvchilarning baholari, natijalari va akademik progressini boshqarish moduli."/>}
  {tab==="tasks"&&<ModulePlaceholder title="Topshiriqlar" eyebrow="TASK MANAGEMENT" description="Topshiriqlarni yaratish, topshirish va tekshirish jarayonlarini boshqarish moduli."/>}
  {tab==="hub"&&<ModulePlaceholder title="Student HUB" eyebrow="STUDENT HUB CONTROL" description="Student HUB, modul ruxsatlari va o‘quvchi portalini boshqarish markazi."/>}
- {tab==="certificates"&&<ModulePlaceholder title="Sertifikatlar" eyebrow="CERTIFICATE MANAGEMENT" description="Sertifikatlarni yaratish, berish, tahrirlash va bekor qilish boshqaruvi."/>}
+ {tab==="certificates"&&<Certificates students={students} courses={courses}/>}
  {tab==="debts"&&<ModulePlaceholder title="Qarzdorlik" eyebrow="FINANCE CONTROL" description="O‘quvchilarning to‘lov holati va qarzdorliklarini nazorat qilish moduli."/>}
  {tab==="settings"&&<ModulePlaceholder title="Sozlamalar" eyebrow="SYSTEM SETTINGS" description="NOVA ACADEMY CRM tizim sozlamalari va konfiguratsiyasi."/>}
 
  {tab==="overview"&&<Overview students={students} groups={groups} leads={leads} payments={payments} attendance={attendance} revenue={revenue} newLeads={newLeads} onStudents={()=>setTab("students")} onLeads={()=>setTab("leads")}/>} 
  {tab==="students"&&<Students students={filtered} query={query} setQuery={setQuery} onAdd={()=>setShowCreate(true)} onOpen={(s)=>{setSelected(s);setShowStudent(true)}}/>}
  {tab==="groups"&&<Groups groups={groups} students={students} courses={courses} enrollments={enrollments} onAdd={()=>setShowGroup(true)} onRefresh={load}/>} {tab==="courses"&&<Courses courses={courses} onAdd={()=>setShowCourse(true)}/>} {tab==="attendance"&&<AttendancePage rows={attendance} students={students} groups={groups} onAdd={()=>setShowAttendance(true)}/>} {tab==="payments"&&<PaymentsPage rows={payments} students={students} onAdd={()=>setShowPayment(true)}/>} {tab==="leads"&&<Leads leads={leads} groups={groups} onRefresh={load}/>} {tab==="staff"&&<Staff staff={staff} onRefresh={load}/>} {tab==="schedule"&&<Schedule events={events} groups={groups} staff={staff}/>} {tab==="reports"&&<Reports students={students} groups={groups} payments={payments} attendance={attendance}/>} {tab==="access"&&<Access staff={staff}/>}</section></div>{showCreate&&<CreateStudent courses={courses} groups={groups} onClose={()=>setShowCreate(false)} onSaved={async()=>{setShowCreate(false);await load()}}/>}{showStudent&&selected&&<StudentDrawer student={selected} groups={groups} courses={courses} onClose={()=>setShowStudent(false)} onSaved={async()=>{setShowStudent(false);await load()}}/>}{showGroup&&<CreateGroup courses={courses} onClose={()=>setShowGroup(false)} onSaved={async()=>{setShowGroup(false);await load()}}/>}{showCourse&&<CreateCourse onClose={()=>setShowCourse(false)} onSaved={async()=>{setShowCourse(false);await load()}}/>}{showPayment&&<CreatePayment students={students} courses={courses} onClose={()=>setShowPayment(false)} onSaved={async()=>{setShowPayment(false);await load()}}/>}{showAttendance&&<CreateAttendance students={students} groups={groups} onClose={()=>setShowAttendance(false)} onSaved={async()=>{setShowAttendance(false);await load()}}/>}</main>
+}
+
+
+function Certificates({students,courses}:{students:Student[];courses:Course[]}){
+ const [rows,setRows]=useState<any[]>([]);
+ const [loading,setLoading]=useState(true);
+ const [saving,setSaving]=useState(false);
+ const [query,setQuery]=useState("");
+ const [statusFilter,setStatusFilter]=useState<"all"|"active"|"revoked">("all");
+ const [editing,setEditing]=useState<any|null>(null);
+ const [showForm,setShowForm]=useState(false);
+
+ const emptyForm={
+  id:"",
+  student_id:"",
+  title:"",
+  course_name:"",
+  certificate_no:"",
+  issued_at:new Date().toISOString().slice(0,10),
+  file_url:"",
+  status:"active"
+ };
+
+ const [form,setForm]=useState<any>(emptyForm);
+
+ async function loadCertificates(){
+  setLoading(true);
+
+  const {data,error}=await supabase
+   .from("student_certificates")
+   .select(`
+    id,
+    student_id,
+    title,
+    course_name,
+    certificate_no,
+    issued_at,
+    file_url,
+    status,
+    created_by,
+    created_at
+   `)
+   .order("issued_at",{ascending:false})
+   .order("created_at",{ascending:false});
+
+  if(error){
+   alert(error.message||"Sertifikatlarni yuklashda xatolik.");
+   setRows([]);
+  }else{
+   setRows(data||[]);
+  }
+
+  setLoading(false);
+ }
+
+ useEffect(()=>{
+  loadCertificates();
+ },[]);
+
+ function openCreate(){
+  setEditing(null);
+  setForm({
+   ...emptyForm,
+   issued_at:new Date().toISOString().slice(0,10)
+  });
+  setShowForm(true);
+ }
+
+ function openEdit(row:any){
+  setEditing(row);
+  setForm({
+   id:row.id,
+   student_id:row.student_id||"",
+   title:row.title||"",
+   course_name:row.course_name||"",
+   certificate_no:row.certificate_no||"",
+   issued_at:row.issued_at||new Date().toISOString().slice(0,10),
+   file_url:row.file_url||"",
+   status:row.status||"active"
+  });
+  setShowForm(true);
+ }
+
+ async function save(){
+  if(!form.student_id||!form.title.trim()){
+   alert("O‘quvchi va sertifikat nomini kiriting.");
+   return;
+  }
+
+  setSaving(true);
+
+  try{
+   const action=editing?"certificate_update":"certificate_create";
+
+   const response=await fetch("/api/admin/manage",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+     action,
+     id:editing?.id||undefined,
+     student_id:form.student_id,
+     title:form.title.trim(),
+     course_name:form.course_name.trim()||null,
+     certificate_no:form.certificate_no.trim()||null,
+     issued_at:form.issued_at,
+     file_url:form.file_url.trim()||null,
+     status:form.status
+    })
+   });
+
+   const result=await response.json();
+
+   if(!response.ok){
+    alert(result.error||"Sertifikatni saqlashda xatolik.");
+    return;
+   }
+
+   setShowForm(false);
+   setEditing(null);
+   setForm(emptyForm);
+   await loadCertificates();
+  }catch(error:any){
+   alert(error?.message||"Server bilan bog‘lanishda xatolik.");
+  }finally{
+   setSaving(false);
+  }
+ }
+
+ async function revoke(row:any){
+  if(row.status==="revoked"){
+   alert("Bu sertifikat allaqachon bekor qilingan.");
+   return;
+  }
+
+  if(!confirm(`"${row.title}" sertifikatini bekor qilishni tasdiqlaysizmi?`)){
+   return;
+  }
+
+  setSaving(true);
+
+  try{
+   const response=await fetch("/api/admin/manage",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+     action:"certificate_revoke",
+     id:row.id
+    })
+   });
+
+   const result=await response.json();
+
+   if(!response.ok){
+    alert(result.error||"Sertifikatni bekor qilishda xatolik.");
+    return;
+   }
+
+   await loadCertificates();
+  }catch(error:any){
+   alert(error?.message||"Server bilan bog‘lanishda xatolik.");
+  }finally{
+   setSaving(false);
+  }
+ }
+
+ const filtered=rows.filter(row=>{
+  const student=students.find(s=>s.id===row.student_id);
+  const studentName=student?.full_name||"";
+
+  const matchesStatus=
+   statusFilter==="all"||
+   row.status===statusFilter;
+
+  const haystack=[
+   row.title,
+   row.course_name,
+   row.certificate_no,
+   studentName
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  return matchesStatus&&haystack.includes(query.toLowerCase());
+ });
+
+ return <>
+  <Head
+   eyebrow="CERTIFICATE MANAGEMENT"
+   title="Sertifikatlar."
+   sub="O‘quvchilarga berilgan sertifikatlarni yaratish, nazorat qilish va bekor qilish."
+   action={
+    <button className="btn primary" onClick={openCreate}>
+     <Plus size={15}/> Sertifikat berish
+    </button>
+   }
+  />
+
+  <div className="crm-panel filters">
+   <div className="searchbox">
+    <Search size={16}/>
+    <input
+     placeholder="O‘quvchi, sertifikat, kurs yoki №..."
+     value={query}
+     onChange={e=>setQuery(e.target.value)}
+    />
+   </div>
+
+   <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+    <Filter size={14}/>
+    {[
+     ["all","Barchasi"],
+     ["active","Active"],
+     ["revoked","Revoked"]
+    ].map(([value,label])=>
+     <button
+      key={value}
+      className={`small-action ${statusFilter===value?"active":""}`}
+      onClick={()=>setStatusFilter(value as any)}
+     >
+      {label}
+     </button>
+    )}
+   </div>
+
+   <span className="filter-info">
+    {filtered.length} ta sertifikat
+   </span>
+  </div>
+
+  {showForm&&
+   <div className="crm-panel" style={{marginTop:12,padding:20}}>
+    <div className="panel-head">
+     <div>
+      <div className="eyebrow">
+       {editing?"EDIT CERTIFICATE":"ISSUE CERTIFICATE"}
+      </div>
+      <h3>{editing?"Sertifikatni tahrirlash":"Yangi sertifikat berish"}</h3>
+     </div>
+
+     <button
+      className="small-action"
+      onClick={()=>setShowForm(false)}
+     >
+      Bekor qilish
+     </button>
+    </div>
+
+    <div className="form-grid">
+     <label>
+      <span>O‘quvchi</span>
+      <select
+       value={form.student_id}
+       onChange={e=>setForm((x:any)=>({...x,student_id:e.target.value}))}
+      >
+       <option value="">O‘quvchini tanlang</option>
+       {students.map(student=>
+        <option key={student.id} value={student.id}>
+         {student.full_name}
+        </option>
+       )}
+      </select>
+     </label>
+
+     <label>
+      <span>Sertifikat nomi</span>
+      <input
+       value={form.title}
+       onChange={e=>setForm((x:any)=>({...x,title:e.target.value}))}
+       placeholder="Masalan: Python Fundamentals"
+      />
+     </label>
+
+     <label>
+      <span>Kurs</span>
+      <select
+       value={form.course_name}
+       onChange={e=>setForm((x:any)=>({...x,course_name:e.target.value}))}
+      >
+       <option value="">Kursni tanlang</option>
+       {courses.map(course=>
+        <option key={course.id} value={course.name}>
+         {course.name}
+        </option>
+       )}
+      </select>
+     </label>
+
+     <label>
+      <span>Certificate №</span>
+      <input
+       value={form.certificate_no}
+       onChange={e=>setForm((x:any)=>({...x,certificate_no:e.target.value}))}
+       placeholder="NOVA-2026-0001"
+      />
+     </label>
+
+     <label>
+      <span>Berilgan sana</span>
+      <input
+       type="date"
+       value={form.issued_at}
+       onChange={e=>setForm((x:any)=>({...x,issued_at:e.target.value}))}
+      />
+     </label>
+
+     <label>
+      <span>File URL</span>
+      <input
+       value={form.file_url}
+       onChange={e=>setForm((x:any)=>({...x,file_url:e.target.value}))}
+       placeholder="https://..."
+      />
+     </label>
+
+     {editing&&
+      <label>
+       <span>Status</span>
+       <select
+        value={form.status}
+        onChange={e=>setForm((x:any)=>({...x,status:e.target.value}))}
+       >
+        <option value="active">Active</option>
+        <option value="revoked">Revoked</option>
+       </select>
+      </label>
+     }
+    </div>
+
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16}}>
+     <button
+      className="btn"
+      onClick={()=>setShowForm(false)}
+      disabled={saving}
+     >
+      Bekor qilish
+     </button>
+
+     <button
+      className="btn primary"
+      onClick={save}
+      disabled={saving}
+     >
+      {saving?"Saqlanmoqda...":editing?"Saqlash":"Sertifikat berish"}
+     </button>
+    </div>
+   </div>
+  }
+
+  <div className="crm-panel table-panel" style={{marginTop:12}}>
+   <div className="table-wrap">
+    <table>
+     <thead>
+      <tr>
+       <th>Sertifikat</th>
+       <th>O‘quvchi</th>
+       <th>Kurs</th>
+       <th>№</th>
+       <th>Sana</th>
+       <th>Status</th>
+       <th></th>
+      </tr>
+     </thead>
+
+     <tbody>
+      {loading?
+       <tr>
+        <td colSpan={7} className="empty-table">
+         Sertifikatlar yuklanmoqda...
+        </td>
+       </tr>
+      :
+      filtered.map(row=>{
+       const student=students.find(s=>s.id===row.student_id);
+
+       return <tr key={row.id}>
+        <td>
+         <div className="student-cell">
+          <div className="avatar">
+           <ShieldCheck size={15}/>
+          </div>
+          <div>
+           <b>{row.title}</b>
+           {row.file_url&&
+            <small>
+             <a href={row.file_url} target="_blank" rel="noreferrer">
+              Faylni ochish
+             </a>
+            </small>
+           }
+          </div>
+         </div>
+        </td>
+
+        <td>
+         <b>{student?.full_name||"Noma’lum o‘quvchi"}</b>
+        </td>
+
+        <td>{row.course_name||"—"}</td>
+
+        <td>
+         <code>{row.certificate_no||"—"}</code>
+        </td>
+
+        <td>
+ {row.issued_at
+  ? new Intl.DateTimeFormat("uz-UZ").format(
+      new Date(`${row.issued_at}T00:00:00`)
+    )
+  : "—"}
+</td>
+
+        <td>
+         <span className={`status ${row.status==="active"?"status-studying":"status-rejected"}`}>
+          {row.status==="active"?"Active":"Revoked"}
+         </span>
+        </td>
+
+        <td>
+         <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+          <button
+           className="small-action"
+           onClick={()=>openEdit(row)}
+          >
+           Tahrirlash
+          </button>
+
+          {row.status==="active"&&
+           <button
+            className="small-action"
+            onClick={()=>revoke(row)}
+            disabled={saving}
+           >
+            Bekor qilish
+           </button>
+          }
+         </div>
+        </td>
+       </tr>
+      })}
+
+      {!loading&&!filtered.length&&
+       <tr>
+        <td colSpan={7} className="empty-table">
+         Sertifikatlar topilmadi.
+        </td>
+       </tr>
+      }
+     </tbody>
+    </table>
+   </div>
+  </div>
+ </>
 }
 
 function ModulePlaceholder({title,eyebrow,description}:{title:string;eyebrow:string;description:string}){

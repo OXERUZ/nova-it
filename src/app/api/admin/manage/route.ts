@@ -609,6 +609,230 @@ export async function POST(req: Request) {
     // STUDENT STATUS
     // =========================
 
+
+    // =========================
+    // CERTIFICATES
+    // =========================
+
+    if (action === "certificate_create") {
+      const {
+        student_id,
+        title,
+        course_name,
+        certificate_no,
+        issued_at,
+        file_url,
+      } = body;
+
+      if (!student_id || !title?.trim()) {
+        return NextResponse.json(
+          { error: "O‘quvchi va sertifikat nomi kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { data: student, error: studentError } = await db
+        .from("profiles")
+        .select("id,full_name,role")
+        .eq("id", student_id)
+        .eq("role", "student")
+        .maybeSingle();
+
+      if (studentError) throw studentError;
+
+      if (!student) {
+        return NextResponse.json(
+          { error: "O‘quvchi topilmadi." },
+          { status: 404 }
+        );
+      }
+
+      const { data, error } = await db
+        .from("student_certificates")
+        .insert({
+          student_id,
+          title: title.trim(),
+          course_name: course_name?.trim() || null,
+          certificate_no: certificate_no?.trim() || null,
+          issued_at: issued_at || new Date().toISOString().slice(0, 10),
+          file_url: file_url?.trim() || null,
+          status: "active",
+          created_by: admin.user.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === "23505") {
+          return NextResponse.json(
+            { error: "Bu certificate № allaqachon mavjud." },
+            { status: 409 }
+          );
+        }
+
+        throw error;
+      }
+
+      await db.from("crm_activity").insert({
+        actor_id: admin.user.id,
+        entity_type: "certificate",
+        entity_id: data.id,
+        action: "created",
+        description: `${student.full_name} uchun "${data.title}" sertifikati berildi.`,
+        metadata: {
+          student_id,
+          certificate_no: data.certificate_no,
+          course_name: data.course_name,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        certificate: data,
+      });
+    }
+
+    if (action === "certificate_update") {
+      const {
+        id,
+        student_id,
+        title,
+        course_name,
+        certificate_no,
+        issued_at,
+        file_url,
+        status,
+      } = body;
+
+      if (!id || !student_id || !title?.trim()) {
+        return NextResponse.json(
+          { error: "Sertifikat ID, o‘quvchi va sertifikat nomi kerak." },
+          { status: 400 }
+        );
+      }
+
+      if (!["active", "revoked"].includes(status || "active")) {
+        return NextResponse.json(
+          { error: "Noto‘g‘ri sertifikat statusi." },
+          { status: 400 }
+        );
+      }
+
+      const { data: student, error: studentError } = await db
+        .from("profiles")
+        .select("id,full_name,role")
+        .eq("id", student_id)
+        .eq("role", "student")
+        .maybeSingle();
+
+      if (studentError) throw studentError;
+
+      if (!student) {
+        return NextResponse.json(
+          { error: "O‘quvchi topilmadi." },
+          { status: 404 }
+        );
+      }
+
+      const { data, error } = await db
+        .from("student_certificates")
+        .update({
+          student_id,
+          title: title.trim(),
+          course_name: course_name?.trim() || null,
+          certificate_no: certificate_no?.trim() || null,
+          issued_at: issued_at || new Date().toISOString().slice(0, 10),
+          file_url: file_url?.trim() || null,
+          status: status || "active",
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === "23505") {
+          return NextResponse.json(
+            { error: "Bu certificate № allaqachon mavjud." },
+            { status: 409 }
+          );
+        }
+
+        throw error;
+      }
+
+      await db.from("crm_activity").insert({
+        actor_id: admin.user.id,
+        entity_type: "certificate",
+        entity_id: id,
+        action: "updated",
+        description: `${student.full_name} sertifikati yangilandi.`,
+        metadata: {
+          student_id,
+          certificate_no: data.certificate_no,
+          status: data.status,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        certificate: data,
+      });
+    }
+
+    if (action === "certificate_revoke") {
+      const { id } = body;
+
+      if (!id) {
+        return NextResponse.json(
+          { error: "Sertifikat ID kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { data: certificate, error: certificateError } = await db
+        .from("student_certificates")
+        .select("id,student_id,title,certificate_no,status")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (certificateError) throw certificateError;
+
+      if (!certificate) {
+        return NextResponse.json(
+          { error: "Sertifikat topilmadi." },
+          { status: 404 }
+        );
+      }
+
+      const { data, error } = await db
+        .from("student_certificates")
+        .update({
+          status: "revoked",
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await db.from("crm_activity").insert({
+        actor_id: admin.user.id,
+        entity_type: "certificate",
+        entity_id: id,
+        action: "revoked",
+        description: `"${certificate.title}" sertifikati bekor qilindi.`,
+        metadata: {
+          student_id: certificate.student_id,
+          certificate_no: certificate.certificate_no,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        certificate: data,
+      });
+    }
+
     if (action === "student_hub_permissions") {
       const {
         student_id,
