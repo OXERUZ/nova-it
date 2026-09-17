@@ -232,7 +232,240 @@ export async function POST(req: Request) {
     // STUDENT PROFILE
     // =========================
 
-    if (action === "student_update") {
+    if (action === "staff_create") {
+    const {
+      full_name, email, phone, role, status, password,
+      city, birth_date, address, started_at, notes, avatar_url
+    } = body;
+
+    const allowedStaffRoles = ["mentor", "manager", "admin", "super_admin"];
+
+    if (!full_name?.trim() || !email?.trim() || !password) {
+      return NextResponse.json(
+        { error: "F.I.Sh., email va parol majburiy." },
+        { status: 400 }
+      );
+    }
+
+    if (!allowedStaffRoles.includes(role)) {
+      return NextResponse.json(
+        { error: "Noto‘g‘ri xodim roli." },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: "Parol kamida 8 belgidan iborat bo‘lishi kerak." },
+        { status: 400 }
+      );
+    }
+
+    const { data: authData, error: authError } =
+      await db.auth.admin.createUser({
+        email: email.trim().toLowerCase(),
+        password,
+        email_confirm: true,
+        phone: phone?.trim() || undefined,
+        phone_confirm: phone?.trim() ? true : undefined,
+        user_metadata: {
+          full_name: full_name.trim(),
+          role,
+        },
+      });
+
+    if (authError || !authData.user) {
+      throw authError || new Error("Auth foydalanuvchisini yaratib bo‘lmadi.");
+    }
+
+    const staffId = authData.user.id;
+
+    const { error: profileError } = await db.from("profiles").insert({
+      id: staffId,
+      full_name: full_name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone?.trim() || null,
+      role,
+      status: status || "active",
+      city: city?.trim() || null,
+      birth_date: birth_date || null,
+      address: address?.trim() || null,
+      started_at: started_at || null,
+      notes: notes?.trim() || null,
+      avatar_url: avatar_url || null,
+      rating_points: 0,
+    });
+
+    if (profileError) {
+      await db.auth.admin.deleteUser(staffId);
+      throw profileError;
+    }
+
+    await db.from("crm_activity").insert({
+      actor_id: admin.user.id,
+      entity_type: "staff",
+      entity_id: staffId,
+      action: "created",
+      description: `${full_name.trim()} xodim sifatida qo‘shildi (${role}).`,
+    });
+
+    return NextResponse.json({ success: true, id: staffId });
+  }
+
+  if (action === "staff_update") {
+    const {
+      id, full_name, email, phone, role, status, password,
+      city, birth_date, address, started_at, notes, avatar_url
+    } = body;
+
+    const allowedStaffRoles = ["mentor", "manager", "admin", "super_admin"];
+
+    if (!id || !full_name?.trim()) {
+      return NextResponse.json(
+        { error: "Xodim ID va F.I.Sh. kerak." },
+        { status: 400 }
+      );
+    }
+
+    if (!allowedStaffRoles.includes(role)) {
+      return NextResponse.json(
+        { error: "Noto‘g‘ri xodim roli." },
+        { status: 400 }
+      );
+    }
+
+    if (password && password.length < 8) {
+      return NextResponse.json(
+        { error: "Parol kamida 8 belgidan iborat bo‘lishi kerak." },
+        { status: 400 }
+      );
+    }
+
+    const updateData: Record<string, any> = {
+      full_name: full_name.trim(),
+      email: email?.trim().toLowerCase() || null,
+      phone: phone?.trim() || null,
+      role,
+      status: status || "active",
+      city: city?.trim() || null,
+      birth_date: birth_date || null,
+      address: address?.trim() || null,
+      started_at: started_at || null,
+      notes: notes?.trim() || null,
+      avatar_url: avatar_url || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: profileError } = await db
+      .from("profiles")
+      .update(updateData)
+      .eq("id", id);
+
+    if (profileError) throw profileError;
+
+    const authUpdate: Record<string, any> = {
+      user_metadata: {
+        full_name: full_name.trim(),
+        role,
+      },
+    };
+
+    if (email?.trim()) {
+      authUpdate.email = email.trim().toLowerCase();
+    }
+
+    if (phone?.trim()) {
+      authUpdate.phone = phone.trim();
+      authUpdate.phone_confirm = true;
+    } else {
+      authUpdate.phone = null;
+    }
+
+    if (password) {
+      authUpdate.password = password;
+    }
+
+    const { error: authError } =
+      await db.auth.admin.updateUserById(id, authUpdate);
+
+    if (authError) throw authError;
+
+    await db.from("crm_activity").insert({
+      actor_id: admin.user.id,
+      entity_type: "staff",
+      entity_id: id,
+      action: "updated",
+      description: `${full_name.trim()} xodim profili yangilandi.`,
+    });
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "staff_status") {
+    const { id, status } = body;
+
+    if (!id || !status) {
+      return NextResponse.json(
+        { error: "Xodim ID va holat kerak." },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await db
+      .from("profiles")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .in("role", ["mentor", "manager", "admin", "super_admin"]);
+
+    if (error) throw error;
+
+    await db.from("crm_activity").insert({
+      actor_id: admin.user.id,
+      entity_type: "staff",
+      entity_id: id,
+      action: "status_changed",
+      description: `Xodim holati ${status} ga o‘zgartirildi.`,
+    });
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "staff_archive") {
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Xodim ID kerak." },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await db
+      .from("profiles")
+      .update({
+        status: "removed",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .in("role", ["mentor", "manager", "admin", "super_admin"]);
+
+    if (error) throw error;
+
+    await db.from("crm_activity").insert({
+      actor_id: admin.user.id,
+      entity_type: "staff",
+      entity_id: id,
+      action: "archived",
+      description: "Xodim profili arxivlandi.",
+    });
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "student_update") {
       const {
         id,
         full_name,

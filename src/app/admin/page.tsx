@@ -41,7 +41,7 @@ export default function Admin(){
  return <main className="crm-page"><header className="crm-nav"><div className="crm-brand"><a className="logo" href="/">NOVA <span>ACADEMY</span></a><b>PRO CRM</b></div><div className="crm-actions"><span className="admin-online"><i/> Online</span><button className="icon-btn" onClick={load} disabled={loading}><RefreshCw size={16}/></button><button className="btn" onClick={logout}><LogOut size={15}/> Chiqish</button></div></header><div className="crm-layout"><aside className="crm-sidebar"><div className="side-label">NOVA MANAGEMENT</div>{nav.map(([id,label,Icon])=><button key={id} className={`side-link ${tab===id?"active":""}`} onClick={()=>setTab(id)}><Icon/><span>{label}</span>{id==="leads"&&newLeads>0?<em>{newLeads}</em>:<ChevronRight size={14}/>}</button>)}<div className="crm-sidebar-foot"><span>NOVA ACADEMY</span><small>Learning · CRM · Growth</small></div></aside><section className="crm-content">{error&&<div className="crm-alert">{error}<button onClick={()=>setError("")}><X size={15}/></button></div>}
  {tab==="overview"&&<Overview students={students} groups={groups} leads={leads} payments={payments} attendance={attendance} revenue={revenue} newLeads={newLeads} onStudents={()=>setTab("students")} onLeads={()=>setTab("leads")}/>} 
  {tab==="students"&&<Students students={filtered} query={query} setQuery={setQuery} onAdd={()=>setShowCreate(true)} onOpen={(s)=>{setSelected(s);setShowStudent(true)}}/>}
- {tab==="groups"&&<Groups groups={groups} students={students} courses={courses} enrollments={enrollments} onAdd={()=>setShowGroup(true)} onRefresh={load}/>} {tab==="courses"&&<Courses courses={courses} onAdd={()=>setShowCourse(true)}/>} {tab==="attendance"&&<AttendancePage rows={attendance} students={students} groups={groups} onAdd={()=>setShowAttendance(true)}/>} {tab==="payments"&&<PaymentsPage rows={payments} students={students} onAdd={()=>setShowPayment(true)}/>} {tab==="leads"&&<Leads leads={leads} groups={groups} onRefresh={load}/>} {tab==="staff"&&<Staff staff={staff}/>} {tab==="schedule"&&<Schedule events={events} groups={groups} staff={staff}/>} {tab==="reports"&&<Reports students={students} groups={groups} payments={payments} attendance={attendance}/>} {tab==="access"&&<Access staff={staff}/>}</section></div>{showCreate&&<CreateStudent courses={courses} groups={groups} onClose={()=>setShowCreate(false)} onSaved={async()=>{setShowCreate(false);await load()}}/>}{showStudent&&selected&&<StudentDrawer student={selected} groups={groups} courses={courses} onClose={()=>setShowStudent(false)} onSaved={async()=>{setShowStudent(false);await load()}}/>}{showGroup&&<CreateGroup courses={courses} onClose={()=>setShowGroup(false)} onSaved={async()=>{setShowGroup(false);await load()}}/>}{showCourse&&<CreateCourse onClose={()=>setShowCourse(false)} onSaved={async()=>{setShowCourse(false);await load()}}/>}{showPayment&&<CreatePayment students={students} courses={courses} onClose={()=>setShowPayment(false)} onSaved={async()=>{setShowPayment(false);await load()}}/>}{showAttendance&&<CreateAttendance students={students} groups={groups} onClose={()=>setShowAttendance(false)} onSaved={async()=>{setShowAttendance(false);await load()}}/>}</main>
+ {tab==="groups"&&<Groups groups={groups} students={students} courses={courses} enrollments={enrollments} onAdd={()=>setShowGroup(true)} onRefresh={load}/>} {tab==="courses"&&<Courses courses={courses} onAdd={()=>setShowCourse(true)}/>} {tab==="attendance"&&<AttendancePage rows={attendance} students={students} groups={groups} onAdd={()=>setShowAttendance(true)}/>} {tab==="payments"&&<PaymentsPage rows={payments} students={students} onAdd={()=>setShowPayment(true)}/>} {tab==="leads"&&<Leads leads={leads} groups={groups} onRefresh={load}/>} {tab==="staff"&&<Staff staff={staff} onRefresh={load}/>} {tab==="schedule"&&<Schedule events={events} groups={groups} staff={staff}/>} {tab==="reports"&&<Reports students={students} groups={groups} payments={payments} attendance={attendance}/>} {tab==="access"&&<Access staff={staff}/>}</section></div>{showCreate&&<CreateStudent courses={courses} groups={groups} onClose={()=>setShowCreate(false)} onSaved={async()=>{setShowCreate(false);await load()}}/>}{showStudent&&selected&&<StudentDrawer student={selected} groups={groups} courses={courses} onClose={()=>setShowStudent(false)} onSaved={async()=>{setShowStudent(false);await load()}}/>}{showGroup&&<CreateGroup courses={courses} onClose={()=>setShowGroup(false)} onSaved={async()=>{setShowGroup(false);await load()}}/>}{showCourse&&<CreateCourse onClose={()=>setShowCourse(false)} onSaved={async()=>{setShowCourse(false);await load()}}/>}{showPayment&&<CreatePayment students={students} courses={courses} onClose={()=>setShowPayment(false)} onSaved={async()=>{setShowPayment(false);await load()}}/>}{showAttendance&&<CreateAttendance students={students} groups={groups} onClose={()=>setShowAttendance(false)} onSaved={async()=>{setShowAttendance(false);await load()}}/>}</main>
 }
 
 function Head({eyebrow,title,sub,action}:{eyebrow:string;title:string;sub?:string;action?:React.ReactNode}){return <div className="crm-title"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{sub&&<p className="muted">{sub}</p>}</div>{action}</div>}
@@ -1381,7 +1381,387 @@ function AcceptStudentModal({
  )
 }
 
-function Staff({staff}:{staff:Student[]}){return <><Head eyebrow="PEOPLE" title="Mentorlar va xodimlar." sub="Xodim profili va CRM rollarini ko‘ring."/><div className="crm-card-grid">{staff.map(s=><div className="crm-panel group-card" key={s.id}><div className="student-cell"><div className="avatar">{s.full_name.split(" ").map(x=>x[0]).slice(0,2).join("")}</div><div><h3>{s.full_name}</h3><p>{s.role}</p></div></div><div className="drawer-grid" style={{marginTop:18}}><div><span>Telefon</span><strong>{s.phone||"—"}</strong></div><div><span>Email</span><strong>{s.email||"—"}</strong></div></div></div>)}</div></>}
+function Staff({staff,onRefresh}:{staff:Student[];onRefresh:()=>Promise<void>}){
+ const [selected,setSelected]=useState<Student|null>(null);
+ const [show,setShow]=useState(false);
+ const [saving,setSaving]=useState(false);
+ const [query,setQuery]=useState("");
+
+ const filtered=staff.filter(s=>
+  !query ||
+  `${s.full_name} ${s.email||""} ${s.phone||""} ${s.role}`
+   .toLowerCase()
+   .includes(query.toLowerCase())
+ );
+
+ async function archive(id:string){
+  if(!confirm("Bu xodimni arxivlashni tasdiqlaysizmi?")) return;
+
+  setSaving(true);
+
+  try{
+   const response=await fetch("/api/admin/manage",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+     action:"staff_archive",
+     id
+    })
+   });
+
+   const result=await response.json();
+
+   if(!response.ok){
+    throw new Error(result.error||"Xodimni arxivlashda xatolik.");
+   }
+
+   await onRefresh();
+
+  }catch(error:any){
+   alert(error?.message||"Server bilan bog‘lanishda xatolik.");
+  }finally{
+   setSaving(false);
+  }
+ }
+
+ async function toggleStatus(person:Student){
+  const next=person.status==="active"?"inactive":"active";
+
+  setSaving(true);
+
+  try{
+   const response=await fetch("/api/admin/manage",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+     action:"staff_status",
+     id:person.id,
+     status:next
+    })
+   });
+
+   const result=await response.json();
+
+   if(!response.ok){
+    throw new Error(result.error||"Xodim holatini o‘zgartirishda xatolik.");
+   }
+
+   await onRefresh();
+
+  }catch(error:any){
+   alert(error?.message||"Server bilan bog‘lanishda xatolik.");
+  }finally{
+   setSaving(false);
+  }
+ }
+
+ return <>
+  <Head
+   eyebrow="PEOPLE MANAGEMENT"
+   title="Mentorlar va xodimlar."
+   sub="Xodimlarni qo‘shing, tahrirlang, rollari va hisob holatini boshqaring."
+   action={
+    <button
+     className="btn primary"
+     onClick={()=>{
+      setSelected(null);
+      setShow(true);
+     }}
+    >
+     <Plus size={15}/> Xodim qo‘shish
+    </button>
+   }
+  />
+
+  <div className="crm-panel filters">
+   <div className="searchbox">
+    <Search size={16}/>
+    <input
+     placeholder="Ism, email, telefon, rol..."
+     value={query}
+     onChange={e=>setQuery(e.target.value)}
+    />
+   </div>
+
+   <span className="filter-info">
+    <Users size={14}/> {filtered.length} ta xodim
+   </span>
+  </div>
+
+  <div className="crm-card-grid">
+   {filtered.map(s=>
+    <div className="crm-panel group-card" key={s.id}>
+
+     <div className="student-cell">
+      <div className="avatar">
+       {s.full_name.split(" ").map(x=>x[0]).slice(0,2).join("")}
+      </div>
+
+      <div style={{minWidth:0}}>
+       <h3>{s.full_name}</h3>
+       <p>{s.role}</p>
+      </div>
+     </div>
+
+     <div className="drawer-grid" style={{marginTop:18}}>
+      <div>
+       <span>Telefon</span>
+       <strong>{s.phone||"—"}</strong>
+      </div>
+
+      <div>
+       <span>Email</span>
+       <strong>{s.email||"—"}</strong>
+      </div>
+
+      <div>
+       <span>Holat</span>
+       <strong>{s.status||"active"}</strong>
+      </div>
+
+      <div>
+       <span>Shahar</span>
+       <strong>{s.city||"—"}</strong>
+      </div>
+     </div>
+
+     <div className="quick-actions" style={{marginTop:18}}>
+      <button
+       className="btn"
+       onClick={()=>{
+        setSelected(s);
+        setShow(true);
+       }}
+      >
+       <Settings2 size={15}/> Tahrirlash
+      </button>
+
+      <button
+       className="btn"
+       disabled={saving}
+       onClick={()=>toggleStatus(s)}
+      >
+       {s.status==="active"?"Deaktivatsiya":"Faollashtirish"}
+      </button>
+
+      <button
+       className="btn"
+       disabled={saving}
+       onClick={()=>archive(s.id)}
+      >
+       <Trash2 size={15}/> Arxiv
+      </button>
+     </div>
+
+    </div>
+   )}
+
+   {!filtered.length&&
+    <div className="crm-panel empty-table">
+     Xodimlar topilmadi.
+    </div>
+   }
+  </div>
+
+  {show&&
+   <StaffModal
+    staff={selected}
+    onClose={()=>setShow(false)}
+    onSaved={async()=>{
+     setShow(false);
+     await onRefresh();
+    }}
+   />
+  }
+ </>
+}
+
+function StaffModal({
+ staff,
+ onClose,
+ onSaved
+}:{
+ staff:Student|null;
+ onClose:()=>void;
+ onSaved:()=>Promise<void>;
+}){
+ const [fullName,setFullName]=useState(staff?.full_name||"");
+ const [email,setEmail]=useState(staff?.email||"");
+ const [phone,setPhone]=useState(staff?.phone||"");
+ const [role,setRole]=useState(staff?.role||"mentor");
+ const [status,setStatus]=useState(staff?.status||"active");
+ const [password,setPassword]=useState("");
+ const [city,setCity]=useState(staff?.city||"");
+ const [birthDate,setBirthDate]=useState(staff?.birth_date||"");
+ const [address,setAddress]=useState(staff?.address||"");
+ const [startedAt,setStartedAt]=useState(staff?.started_at||"");
+ const [notes,setNotes]=useState(staff?.notes||"");
+ const [saving,setSaving]=useState(false);
+
+ async function save(){
+  if(!fullName.trim()||!email.trim()){
+   alert("F.I.Sh. va emailni kiriting.");
+   return;
+  }
+
+  if(!staff&&!password){
+   alert("Yangi xodim uchun parol majburiy.");
+   return;
+  }
+
+  if(password&&password.length<8){
+   alert("Parol kamida 8 belgidan iborat bo‘lishi kerak.");
+   return;
+  }
+
+  setSaving(true);
+
+  try{
+   const response=await fetch("/api/admin/manage",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+     action:staff?"staff_update":"staff_create",
+     ...(staff?{id:staff.id}:{}),
+     full_name:fullName.trim(),
+     email:email.trim().toLowerCase(),
+     phone:phone.trim(),
+     role,
+     status,
+     password:password||undefined,
+     city:city.trim(),
+     birth_date:birthDate||null,
+     address:address.trim(),
+     started_at:startedAt||null,
+     notes:notes.trim(),
+     avatar_url:null
+    })
+   });
+
+   const result=await response.json();
+
+   if(!response.ok){
+    throw new Error(result.error||"Xodimni saqlashda xatolik.");
+   }
+
+   await onSaved();
+
+  }catch(error:any){
+   alert(error?.message||"Server bilan bog‘lanishda xatolik.");
+  }finally{
+   setSaving(false);
+  }
+ }
+
+ return <Modal
+  title={staff?"Xodimni tahrirlash":"Yangi xodim qo‘shish"}
+  onClose={onClose}
+ >
+  <div className="eyebrow">STAFF ACCOUNT MANAGEMENT</div>
+
+  <h3>{staff?staff.full_name:"Yangi xodim"}</h3>
+
+  <div className="drawer-grid">
+
+   <FormInput
+    label="F.I.Sh. *"
+    value={fullName}
+    onChange={setFullName}
+   />
+
+   <FormInput
+    label="Email *"
+    type="email"
+    value={email}
+    onChange={setEmail}
+   />
+
+   <FormInput
+    label="Telefon"
+    value={phone}
+    onChange={setPhone}
+   />
+
+   <div className="field">
+    <label>Rol *</label>
+
+    <select
+     value={role}
+     onChange={e=>setRole(e.target.value)}
+    >
+     <option value="mentor">Mentor</option>
+     <option value="manager">Manager</option>
+     <option value="admin">Admin</option>
+     <option value="super_admin">Super Admin</option>
+    </select>
+   </div>
+
+   <div className="field">
+    <label>Holat</label>
+
+    <select
+     value={status}
+     onChange={e=>setStatus(e.target.value)}
+    >
+     <option value="active">Faol</option>
+     <option value="inactive">Faol emas</option>
+     <option value="removed">Arxiv</option>
+    </select>
+   </div>
+
+   <FormInput
+    label={staff?"Yangi parol (ixtiyoriy)":"Parol *"}
+    type="password"
+    value={password}
+    onChange={setPassword}
+   />
+
+   <FormInput
+    label="Shahar"
+    value={city}
+    onChange={setCity}
+   />
+
+   <FormInput
+    label="Tug‘ilgan sana"
+    type="date"
+    value={birthDate}
+    onChange={setBirthDate}
+   />
+
+   <FormInput
+    label="Ish boshlagan sana"
+    type="date"
+    value={startedAt}
+    onChange={setStartedAt}
+   />
+
+   <FormInput
+    label="Manzil"
+    value={address}
+    onChange={setAddress}
+   />
+
+   <FormInput
+    label="Izoh"
+    value={notes}
+    onChange={setNotes}
+   />
+
+  </div>
+
+  <button
+   className="btn primary btn-lg"
+   style={{width:"100%",marginTop:18}}
+   onClick={save}
+   disabled={saving}
+  >
+   {saving?"Saqlanmoqda...":"Xodimni saqlash"}
+   <Check size={16}/>
+  </button>
+ </Modal>
+}
+
 function Schedule({events}:{events:any[];groups:Group[];staff:Student[]}){return <><Head eyebrow="ACADEMIC CALENDAR" title="Jadval." sub="Guruh va mentor darslarini markazlashtirilgan kalendarda boshqaring."/><div className="crm-panel table-panel"><div className="table-wrap"><table><thead><tr><th>Vaqt</th><th>Dars</th><th>Guruh</th><th>Mentor</th><th>Xona</th><th>Status</th></tr></thead><tbody>{events.map(e=><tr key={e.id}><td>{new Date(e.starts_at).toLocaleString("uz-UZ")}</td><td><b>{e.title}</b></td><td>{e.group?.name||"—"}</td><td>{e.mentor?.full_name||"—"}</td><td>{e.room||"—"}</td><td>{e.status}</td></tr>)}</tbody></table></div></div></>}
 function Reports({students,groups,payments,attendance}:{students:Student[];groups:Group[];payments:Payment[];attendance:Attendance[]}){const paid=payments.filter(p=>p.status==="paid").reduce((a,p)=>a+Number(p.amount),0);const present=attendance.filter(a=>a.status==="present").length;return <><Head eyebrow="ANALYTICS" title="Hisobotlar." sub="CRM ma’lumotlari asosida operatsion ko‘rsatkichlar."/><div className="crm-metrics"><Metric label="O‘quvchilar" value={students.length} icon={<Users/>}/><Metric label="Guruhlar" value={groups.length} icon={<BookOpen/>}/><Metric label="Tushum" value={`${paid.toLocaleString("uz-UZ")} so‘m`} icon={<DollarSign/>}/><Metric label="Davomat" value={attendance.length?`${Math.round(present/attendance.length*100)}%`:"0%"} icon={<ClipboardCheck/>}/></div><div className="crm-panel report-list"><div><span>Faol o‘quvchilar</span><strong>{students.filter(s=>s.status==="active").length}</strong></div><div><span>Faol guruhlar</span><strong>{groups.filter(g=>g.active).length}</strong></div><div><span>Paid tranzaksiyalar</span><strong>{payments.filter(p=>p.status==="paid").length}</strong></div></div></>}
 function Access({staff}:{staff:Student[]}){return <><Head eyebrow="RBAC" title="Ruxsatlar." sub="Super Admin, Admin, Manager, Mentor va Student rollari."/><div className="crm-card-grid">{roles.map(r=><div className="crm-panel role-card" key={r}><ShieldCheck size={18}/><h3>{r}</h3><p>{r==="super_admin"?"To‘liq tizim nazorati":r==="admin"?"CRM va ma’lumotlar boshqaruvi":r==="manager"?"Operatsion boshqaruv":r==="mentor"?"Guruh va akademik jarayon": "Faqat o‘z profili va ta’lim ma’lumotlari"}</p></div>)}</div></>}
