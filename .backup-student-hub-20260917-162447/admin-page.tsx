@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
 type Tab = "overview"|"students"|"groups"|"courses"|"attendance"|"payments"|"leads"|"staff"|"schedule"|"reports"|"access";
-type Student = { id:string; full_name:string; email:string|null; phone:string|null; login_username:string|null; crm_login_enabled:boolean; hub_login_enabled:boolean; role:string; rating_points:number; status:string; city:string|null; birth_date:string|null; address:string|null; started_at:string|null; notes:string|null; avatar_url:string|null };type Group = { id:string; name:string; course:string; level:string; capacity:number; active:boolean };
+type Student = { id:string; full_name:string; email:string|null; phone:string|null; role:string; rating_points:number; status:string; city:string|null; birth_date:string|null; address:string|null; started_at:string|null; notes:string|null; avatar_url:string|null };
+type Group = { id:string; name:string; course:string; level:string; capacity:number; active:boolean };
 type Course = { id:string; name:string; code:string|null; duration_months:number; price:number; active:boolean };
 type Lead = { id:string; application_number:string; full_name:string; email:string|null; phone:string; course:string; status:string; created_at:string; admin_note:string|null };
 type Payment = { id:string; student_id:string; amount:number; payment_date:string; method:string; status:string; receipt_no:string|null; note:string|null; student?:{full_name:string}[]|null };
@@ -23,13 +24,13 @@ export default function Admin(){
  const [selected,setSelected]=useState<Student|null>(null); const [showStudent,setShowStudent]=useState(false); const [showCreate,setShowCreate]=useState(false); const [showGroup,setShowGroup]=useState(false); const [showCourse,setShowCourse]=useState(false); const [showPayment,setShowPayment]=useState(false); const [showAttendance,setShowAttendance]=useState(false);
  useEffect(()=>{supabase.auth.getSession().then(async({data})=>{if(!data.session){setChecking(false);return}const {data:isAdmin}=await supabase.rpc("is_admin");if(!isAdmin){await supabase.auth.signOut();setError("Bu hisob CRM huquqiga ega emas.");setChecking(false);return}setSession(data.session);await load();setChecking(false)})},[]);
  async function load(){setLoading(true);setError(""); const [s,g,c,l,p,att,en,st,e]=await Promise.all([
-  supabase.from("profiles").select("id,full_name,email,phone,login_username,crm_login_enabled,hub_login_enabled,role,rating_points,status,city,birth_date,address,started_at,notes,avatar_url").order("created_at",{ascending:false}),
+  supabase.from("profiles").select("id,full_name,email,phone,role,rating_points,status,city,birth_date,address,started_at,notes,avatar_url").order("created_at",{ascending:false}),
   supabase.from("groups").select("*").order("created_at",{ascending:false}),supabase.from("courses").select("*").order("created_at",{ascending:false}),
   supabase.from("applications").select("id,application_number,full_name,email,phone,course,status,created_at,admin_note").order("created_at",{ascending:false}),
   supabase.from("payments").select("id,student_id,course_id,amount,payment_date,method,status,receipt_no,note,student:profiles!payments_student_id_fkey(full_name),course:courses!payments_course_id_fkey(name)").order("payment_date",{ascending:false}).limit(200),
   supabase.from("attendance").select("id,student_id,group_id,attendance_date,status,note,student:profiles!attendance_student_id_fkey(full_name)").order("attendance_date",{ascending:false}).limit(200),
   supabase.from("enrollments").select("id,student_id,group_id,course_id,status").eq("status","active"),
-  supabase.from("profiles").select("id,full_name,email,phone,login_username,crm_login_enabled,hub_login_enabled,role,rating_points,status,city,birth_date,address,started_at,notes,avatar_url").in("role",["mentor","manager","admin","super_admin"]),
+  supabase.from("profiles").select("id,full_name,email,phone,role,rating_points,status,city,birth_date,address,started_at,notes,avatar_url").in("role",["mentor","manager","admin","super_admin"]),
   supabase.from("schedule_events").select("*,group:groups!schedule_events_group_id_fkey(name),mentor:profiles!schedule_events_mentor_id_fkey(full_name)").order("starts_at",{ascending:true}).limit(100)
  ]); const errs=[s,g,c,l,p,att,en,st,e].find(x=>x.error); if(errs)setError(errs.error?.message||""); setStudents((s.data||[]).filter((x:any)=>x.role==="student")); setGroups(g.data||[]);setCourses(c.data||[]);setLeads(l.data||[]);setPayments(p.data||[]);setAttendance(att.data||[]);setEnrollments(en.data||[]);setStaff(st.data||[]);setEvents(e.data||[]);setLoading(false); }
  async function logout(){await supabase.auth.signOut();router.replace("/")}
@@ -1845,9 +1846,6 @@ function StudentDrawer({student,groups,courses,onClose,onSaved}:{student:Student
      full_name:f.full_name,
      email:f.email,
      phone:f.phone,
-     login_username:f.login_username,
-     crm_login_enabled:f.crm_login_enabled,
-     hub_login_enabled:f.hub_login_enabled,
      birth_date:f.birth_date,
      city:f.city,
      address:f.address,
@@ -2006,82 +2004,6 @@ function StudentDrawer({student,groups,courses,onClose,onSaved}:{student:Student
      value={f.notes||""}
      onChange={e=>setF({...f,notes:e.target.value})}
     />
-   </div>
-  </div>
-
-  <div className="crm-panel" style={{marginTop:16}}>
-   <div className="eyebrow">ACCOUNT ACCESS</div>
-   <h3>Hisob va kirish huquqlari</h3>
-
-   <div className="drawer-grid">
-    <FormInput
-     label="NOVA Username"
-     value={f.login_username||""}
-     onChange={v=>setF({
-      ...f,
-      login_username:v.toLowerCase().replace(/\\s+/g,"")
-     })}
-     placeholder="masalan: hoshimhon"
-     required
-    />
-
-    <FormInput
-     label="Yangi parol"
-     type="password"
-     value={password}
-     onChange={setPassword}
-     placeholder="O‘zgartirish kerak bo‘lsa kiriting"
-    />
-   </div>
-
-   <div style={{
-    display:"grid",
-    gap:10,
-    marginTop:14
-   }}>
-    <label style={{
-     display:"flex",
-     alignItems:"center",
-     gap:10,
-     cursor:"pointer"
-    }}>
-     <input
-      type="checkbox"
-      checked={f.hub_login_enabled!==false}
-      onChange={e=>setF({
-       ...f,
-       hub_login_enabled:e.target.checked
-      })}
-     />
-     <span>
-      <strong>NOVA HUB kirishi</strong>
-      <small style={{display:"block",opacity:.65}}>
-       O‘quvchi HUB portaliga kira oladi
-      </small>
-     </span>
-    </label>
-
-    <label style={{
-     display:"flex",
-     alignItems:"center",
-     gap:10,
-     cursor:"pointer"
-    }}>
-     <input
-      type="checkbox"
-      checked={f.crm_login_enabled!==false}
-      onChange={e=>setF({
-       ...f,
-       crm_login_enabled:e.target.checked
-      })}
-     />
-     <span>
-      <strong>CRM Login</strong>
-      <small style={{display:"block",opacity:.65}}>
-       O‘quvchi uchun CRM hisobiga kirish ruxsati
-      </small>
-     </span>
-    </label>
    </div>
   </div>
 

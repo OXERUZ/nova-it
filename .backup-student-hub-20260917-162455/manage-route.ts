@@ -479,9 +479,6 @@ export async function POST(req: Request) {
         notes,
         avatar_url,
         password,
-        login_username,
-        crm_login_enabled,
-        hub_login_enabled,
       } = body;
 
       if (!id || !full_name?.trim()) {
@@ -491,42 +488,10 @@ export async function POST(req: Request) {
         );
       }
 
-      const normalizedUsername = login_username?.trim()
-        ? login_username.trim().toLowerCase().replace(/\s+/g, "")
-        : null;
-
-      if (normalizedUsername && !/^[a-z0-9._-]{3,32}$/.test(normalizedUsername)) {
-        return NextResponse.json(
-          { error: "Username 3–32 belgidan iborat bo‘lishi va faqat a-z, 0-9, nuqta, _ yoki - ishlatishi kerak." },
-          { status: 400 }
-        );
-      }
-
-      if (normalizedUsername) {
-        const { data: existingUsername, error: usernameError } = await db
-          .from("profiles")
-          .select("id")
-          .ilike("login_username", normalizedUsername)
-          .neq("id", id)
-          .maybeSingle();
-
-        if (usernameError) throw usernameError;
-
-        if (existingUsername) {
-          return NextResponse.json(
-            { error: `Bu username allaqachon ishlatilgan: ${normalizedUsername}` },
-            { status: 409 }
-          );
-        }
-      }
-
       const updateData: Record<string, any> = {
         full_name: full_name.trim(),
         email: email?.trim() || null,
         phone: phone?.trim() || null,
-        login_username: normalizedUsername,
-        crm_login_enabled: crm_login_enabled !== false,
-        hub_login_enabled: hub_login_enabled !== false,
         birth_date: birth_date || null,
         city: city?.trim() || null,
         address: address?.trim() || null,
@@ -544,19 +509,6 @@ export async function POST(req: Request) {
 
       if (profileError) throw profileError;
 
-      const { error: hubSettingsError } = await db
-        .from("student_hub_settings")
-        .upsert(
-          {
-            student_id: id,
-            hub_enabled: hub_login_enabled !== false,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "student_id" }
-        );
-
-      if (hubSettingsError) throw hubSettingsError;
-
       const authUpdate: Record<string, any> = {};
 
       if (email?.trim()) {
@@ -567,12 +519,6 @@ export async function POST(req: Request) {
         authUpdate.phone = phone.trim();
         authUpdate.phone_confirm = true;
       }
-
-      authUpdate.user_metadata = {
-        full_name: full_name.trim(),
-        role: "student",
-        login_username: normalizedUsername,
-      };
 
       if (password) {
         if (password.length < 8) {

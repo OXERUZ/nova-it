@@ -42,8 +42,32 @@ export default function AcademyHub() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { if (active) setAccess("blocked"); return; }
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-      if (active) setAccess(profile?.role === "student" ? "student" : "blocked");
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role,status,hub_login_enabled")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (
+        profile?.role !== "student" ||
+        profile.status !== "active" ||
+        profile.hub_login_enabled === false
+      ) {
+        if (active) setAccess("blocked");
+        return;
+      }
+
+      const { data: hubSettings } = await supabase
+        .from("student_hub_settings")
+        .select("hub_enabled")
+        .eq("student_id", user.id)
+        .maybeSingle();
+
+      if (active) {
+        setAccess(
+          hubSettings?.hub_enabled === false ? "blocked" : "student"
+        );
+      }
     })();
     return () => { active = false; };
   }, [supabase]);
@@ -51,7 +75,7 @@ export default function AcademyHub() {
   const filtered = useMemo(() => modules.filter(m => `${m.title} ${m.desc} ${m.tag}`.toLowerCase().includes(query.toLowerCase())), [query]);
 
   if (access === "checking") return <main className="nova-hub"><div className="hub-loading"><div className="nova-orb">N</div><p>Student access tekshirilmoqda...</p></div></main>;
-  if (access === "blocked") return <main className="nova-hub"><div className="hub-gate-card"><div className="gate-lock"><Lock size={32}/></div><span className="hub-kicker">NOVA HUB · PRIVATE STUDENT SPACE</span><h1>Bu makon faqat <b>NOVA ACADEMY</b> o‘quvchilari uchun.</h1><p>NOVA HUB imkoniyatlaridan foydalanish uchun NOVA ACADEMY talabasi sifatida tizimga kiring. Ruxsatsiz foydalanuvchilar ushbu bo‘limga kira olmaydi.</p><div className="gate-actions"><button className="hub-primary" onClick={() => router.push("/login")}><LogIn size={17}/> Talaba sifatida kirish</button><button className="hub-secondary" onClick={() => router.push("/")}>Bosh sahifa <ArrowRight size={17}/></button></div></div></main>;
+  if (access === "blocked") return <main className="nova-hub"><div className="hub-gate-card"><div className="gate-lock"><Lock size={32}/></div><span className="hub-kicker">NOVA HUB · PRIVATE STUDENT SPACE</span><h1>Bu makon faqat <b>NOVA ACADEMY</b> o‘quvchilari uchun.</h1><p>NOVA HUB imkoniyatlaridan foydalanish uchun NOVA ACADEMY talabasi sifatida tizimga kiring. Ruxsatsiz foydalanuvchilar ushbu bo‘limga kira olmaydi.</p><div className="gate-actions"><button className="hub-primary" onClick={() => router.push("/hub/login")}><LogIn size={17}/> Talaba sifatida kirish</button><button className="hub-secondary" onClick={() => router.push("/")}>Bosh sahifa <ArrowRight size={17}/></button></div></div></main>;
 
   return <main className={`nova-hub theme-${activeTheme}`}>
     <div className="hub-noise"/><div className="hub-grid"/>
