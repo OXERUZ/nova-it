@@ -1,0 +1,4 @@
+"use client";
+import { CalendarDays, Clock, MapPin } from "lucide-react";
+const lessons=[{day:"Dushanba",time:"18:00–19:30",course:"Frontend Development",room:"NOVA LAB 01"},{day:"Chorshanba",time:"18:00–19:30",course:"Kiberxavfsizlik",room:"Security Lab"},{day:"Juma",time:"18:00–19:30",course:"Python & Backend",room:"NOVA LAB 02"}];
+export default function Schedule(){return <main className="public-page"><div className="page-shell"><a className="back-link" href="/">← NOVA Academy</a><div className="eyebrow">ACADEMIC CALENDAR</div><h1>Dars <span className="accent">jadvali</span></h1><p className="lead">Mashg‘ulotlar va laboratoriya vaqtlarini bir joyda kuzating.</p><div className="schedule-list">{lessons.map((l,i)=><div className="schedule-card" key={i}><CalendarDays/><div><strong>{l.day}</strong><h2>{l.course}</h2><p><Clock size={15}/> {l.time} · <MapPin size={15}/> {l.room}</p></div></div>)}</div></div></main>}
