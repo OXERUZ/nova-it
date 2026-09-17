@@ -1,0 +1,476 @@
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+
+const ADMIN_ROLES = ["super_admin", "admin", "manager"];
+
+async function getAdmin() {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: () => {},
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id,role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !ADMIN_ROLES.includes(profile.role)) return null;
+
+  return { user, profile };
+}
+
+function serviceClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+}
+
+export async function POST(req: Request) {
+  const admin = await getAdmin();
+
+  if (!admin) {
+    return NextResponse.json(
+      { error: "Admin huquqi talab qilinadi." },
+      { status: 403 }
+    );
+  }
+
+  const body = await req.json();
+  const action = body.action;
+  const db = serviceClient();
+
+  try {
+    // =========================
+    // COURSE
+    // =========================
+
+    if (action === "course_create") {
+      const { name, code, duration_months, price } = body;
+
+      if (!name?.trim()) {
+        return NextResponse.json(
+          { error: "Kurs nomi kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { data, error } = await db
+        .from("courses")
+        .insert({
+          name: name.trim(),
+          code: code?.trim() || null,
+          duration_months: Number(duration_months || 0),
+          price: Number(price || 0),
+          active: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, data });
+    }
+
+    if (action === "course_update") {
+      const { id, name, code, duration_months, price, active } = body;
+
+      if (!id || !name?.trim()) {
+        return NextResponse.json(
+          { error: "Kurs ID va nomi kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { data, error } = await db
+        .from("courses")
+        .update({
+          name: name.trim(),
+          code: code?.trim() || null,
+          duration_months: Number(duration_months || 0),
+          price: Number(price || 0),
+          active: active !== false,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, data });
+    }
+
+    if (action === "course_delete") {
+      const { id } = body;
+
+      if (!id) {
+        return NextResponse.json(
+          { error: "Kurs ID kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { error } = await db
+        .from("courses")
+        .update({ active: false })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      return NextResponse.json({
+        success: true,
+        message: "Kurs deaktivatsiya qilindi.",
+      });
+    }
+
+    // =========================
+    // GROUP
+    // =========================
+
+    if (action === "group_create") {
+      const { name, course, level, capacity } = body;
+
+      if (!name?.trim()) {
+        return NextResponse.json(
+          { error: "Guruh nomi kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { data, error } = await db
+        .from("groups")
+        .insert({
+          name: name.trim(),
+          course: course || "",
+          level: level || "Beginner",
+          capacity: Number(capacity || 20),
+          active: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, data });
+    }
+
+    if (action === "group_update") {
+      const { id, name, course, level, capacity, active } = body;
+
+      if (!id) {
+        return NextResponse.json(
+          { error: "Guruh ID kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { data, error } = await db
+        .from("groups")
+        .update({
+          name: name?.trim() || "",
+          course: course || "",
+          level: level || "Beginner",
+          capacity: Number(capacity || 20),
+          active: active !== false,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, data });
+    }
+
+    if (action === "group_delete") {
+      const { id } = body;
+
+      if (!id) {
+        return NextResponse.json(
+          { error: "Guruh ID kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { error } = await db
+        .from("groups")
+        .update({ active: false })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      return NextResponse.json({
+        success: true,
+        message: "Guruh deaktivatsiya qilindi.",
+      });
+    }
+
+    // =========================
+    // STUDENT PROFILE
+    // =========================
+
+    if (action === "student_update") {
+      const {
+        id,
+        full_name,
+        email,
+        phone,
+        birth_date,
+        city,
+        address,
+        started_at,
+        status,
+        notes,
+        avatar_url,
+        password,
+      } = body;
+
+      if (!id || !full_name?.trim()) {
+        return NextResponse.json(
+          { error: "O‘quvchi ID va ism kerak." },
+          { status: 400 }
+        );
+      }
+
+      const updateData: Record<string, any> = {
+        full_name: full_name.trim(),
+        email: email?.trim() || null,
+        phone: phone?.trim() || null,
+        birth_date: birth_date || null,
+        city: city?.trim() || null,
+        address: address?.trim() || null,
+        started_at: started_at || null,
+        status: status || "active",
+        notes: notes?.trim() || null,
+        avatar_url: avatar_url || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: profileError } = await db
+        .from("profiles")
+        .update(updateData)
+        .eq("id", id);
+
+      if (profileError) throw profileError;
+
+      const authUpdate: Record<string, any> = {};
+
+      if (email?.trim()) {
+        authUpdate.email = email.trim().toLowerCase();
+      }
+
+      if (phone?.trim()) {
+        authUpdate.phone = phone.trim();
+        authUpdate.phone_confirm = true;
+      }
+
+      if (password) {
+        if (password.length < 8) {
+          return NextResponse.json(
+            { error: "Parol kamida 8 belgidan iborat bo‘lishi kerak." },
+            { status: 400 }
+          );
+        }
+
+        authUpdate.password = password;
+      }
+
+      if (Object.keys(authUpdate).length > 0) {
+        const { error: authError } = await db.auth.admin.updateUserById(
+          id,
+          authUpdate
+        );
+
+        if (authError) throw authError;
+      }
+
+      await db.from("crm_activity").insert({
+        actor_id: admin.user.id,
+        entity_type: "student",
+        entity_id: id,
+        action: "updated",
+        description: `${full_name.trim()} o‘quvchi profili admin tomonidan yangilandi.`,
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    // =========================
+    // STUDENT STATUS
+    // =========================
+
+    if (action === "student_assign_group") {
+      const { student_id, group_id } = body;
+
+      if (!student_id || !group_id) {
+        return NextResponse.json(
+          { error: "O‘quvchi ID va guruh ID kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { data: group, error: groupError } = await db
+        .from("groups")
+        .select("id,name,course")
+        .eq("id", group_id)
+        .single();
+
+      if (groupError || !group) {
+        return NextResponse.json(
+          { error: "Tanlangan guruh topilmadi." },
+          { status: 404 }
+        );
+      }
+
+      const { data: course, error: courseError } = await db
+        .from("courses")
+        .select("id,name")
+        .eq("name", group.course)
+        .maybeSingle();
+
+      if (courseError) throw courseError;
+
+      const { data: existing, error: existingError } = await db
+        .from("enrollments")
+        .select("id")
+        .eq("student_id", student_id)
+        .eq("status", "active");
+
+      if (existingError) throw existingError;
+
+      if (existing?.length) {
+        const { error } = await db
+          .from("enrollments")
+          .update({
+            group_id,
+            course_id: course?.id || null,
+            status: "active",
+          })
+          .eq("id", existing[0].id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await db
+          .from("enrollments")
+          .insert({
+            student_id,
+            group_id,
+            course_id: course?.id || null,
+            status: "active",
+          });
+
+        if (error) throw error;
+      }
+
+      await db.from("crm_activity").insert({
+        actor_id: admin.user.id,
+        entity_type: "student",
+        entity_id: student_id,
+        action: "group_assigned",
+        description: `O‘quvchi ${group.name} guruhiga biriktirildi.`,
+      });
+
+      return NextResponse.json({
+        success: true,
+        group: group.name,
+      });
+    }
+
+    if (action === "student_status") {
+      const { id, status } = body;
+
+      if (!id || !status) {
+        return NextResponse.json(
+          { error: "O‘quvchi ID va status kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { error } = await db
+        .from("profiles")
+        .update({
+          status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true });
+    }
+
+    // =========================
+    // STUDENT DELETE / ARCHIVE
+    // =========================
+
+    if (action === "student_archive") {
+      const { id } = body;
+
+      if (!id) {
+        return NextResponse.json(
+          { error: "O‘quvchi ID kerak." },
+          { status: 400 }
+        );
+      }
+
+      const { error } = await db
+        .from("profiles")
+        .update({
+          status: "removed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await db.from("crm_activity").insert({
+        actor_id: admin.user.id,
+        entity_type: "student",
+        entity_id: id,
+        action: "archived",
+        description: "O‘quvchi profili arxivlandi.",
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json(
+      { error: `Noma'lum action: ${action}` },
+      { status: 400 }
+    );
+  } catch (error: any) {
+    console.error("ADMIN MANAGE ERROR:", error);
+
+    return NextResponse.json(
+      {
+        error:
+          error?.message ||
+          "Admin operatsiyasini bajarishda xatolik yuz berdi.",
+      },
+      { status: 500 }
+    );
+  }
+}
