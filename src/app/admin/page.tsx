@@ -39,7 +39,7 @@ export default function Admin(){
  return <main className="crm-page"><header className="crm-nav"><div className="crm-brand"><a className="logo" href="/">NOVA <span>ACADEMY</span></a><b>PRO CRM</b></div><div className="crm-actions"><span className="admin-online"><i/> Online</span><button className="icon-btn" onClick={load} disabled={loading}><RefreshCw size={16}/></button><button className="btn" onClick={logout}><LogOut size={15}/> Chiqish</button></div></header><div className="crm-layout"><aside className="crm-sidebar"><div className="side-label">NOVA MANAGEMENT</div>{nav.map(([id,label,Icon])=><button key={id} className={`side-link ${tab===id?"active":""}`} onClick={()=>setTab(id)}><Icon/><span>{label}</span>{id==="leads"&&newLeads>0?<em>{newLeads}</em>:<ChevronRight size={14}/>}</button>)}<div className="crm-sidebar-foot"><span>NOVA ACADEMY</span><small>Learning · CRM · Growth</small></div></aside><section className="crm-content">{error&&<div className="crm-alert">{error}<button onClick={()=>setError("")}><X size={15}/></button></div>}
  {tab==="overview"&&<Overview students={students} groups={groups} leads={leads} payments={payments} attendance={attendance} revenue={revenue} newLeads={newLeads} onStudents={()=>setTab("students")} onLeads={()=>setTab("leads")}/>} 
  {tab==="students"&&<Students students={filtered} query={query} setQuery={setQuery} onAdd={()=>setShowCreate(true)} onOpen={(s)=>{setSelected(s);setShowStudent(true)}}/>}
- {tab==="groups"&&<Groups groups={groups} students={students} onAdd={()=>setShowGroup(true)} onRefresh={load}/>} {tab==="courses"&&<Courses courses={courses} onAdd={()=>setShowCourse(true)}/>} {tab==="attendance"&&<AttendancePage rows={attendance} students={students} groups={groups} onAdd={()=>setShowAttendance(true)}/>} {tab==="payments"&&<PaymentsPage rows={payments} students={students} onAdd={()=>setShowPayment(true)}/>} {tab==="leads"&&<Leads leads={leads} onRefresh={load}/>} {tab==="staff"&&<Staff staff={staff}/>} {tab==="schedule"&&<Schedule events={events} groups={groups} staff={staff}/>} {tab==="reports"&&<Reports students={students} groups={groups} payments={payments} attendance={attendance}/>} {tab==="access"&&<Access staff={staff}/>}</section></div>{showCreate&&<CreateStudent courses={courses} groups={groups} onClose={()=>setShowCreate(false)} onSaved={async()=>{setShowCreate(false);await load()}}/>}{showStudent&&selected&&<StudentDrawer student={selected} groups={groups} courses={courses} onClose={()=>setShowStudent(false)} onSaved={async()=>{setShowStudent(false);await load()}}/>}{showGroup&&<CreateGroup courses={courses} onClose={()=>setShowGroup(false)} onSaved={async()=>{setShowGroup(false);await load()}}/>}{showCourse&&<CreateCourse onClose={()=>setShowCourse(false)} onSaved={async()=>{setShowCourse(false);await load()}}/>}{showPayment&&<CreatePayment students={students} courses={courses} onClose={()=>setShowPayment(false)} onSaved={async()=>{setShowPayment(false);await load()}}/>}{showAttendance&&<CreateAttendance students={students} groups={groups} onClose={()=>setShowAttendance(false)} onSaved={async()=>{setShowAttendance(false);await load()}}/>}</main>
+ {tab==="groups"&&<Groups groups={groups} students={students} onAdd={()=>setShowGroup(true)} onRefresh={load}/>} {tab==="courses"&&<Courses courses={courses} onAdd={()=>setShowCourse(true)}/>} {tab==="attendance"&&<AttendancePage rows={attendance} students={students} groups={groups} onAdd={()=>setShowAttendance(true)}/>} {tab==="payments"&&<PaymentsPage rows={payments} students={students} onAdd={()=>setShowPayment(true)}/>} {tab==="leads"&&<Leads leads={leads} groups={groups} onRefresh={load}/>} {tab==="staff"&&<Staff staff={staff}/>} {tab==="schedule"&&<Schedule events={events} groups={groups} staff={staff}/>} {tab==="reports"&&<Reports students={students} groups={groups} payments={payments} attendance={attendance}/>} {tab==="access"&&<Access staff={staff}/>}</section></div>{showCreate&&<CreateStudent courses={courses} groups={groups} onClose={()=>setShowCreate(false)} onSaved={async()=>{setShowCreate(false);await load()}}/>}{showStudent&&selected&&<StudentDrawer student={selected} groups={groups} courses={courses} onClose={()=>setShowStudent(false)} onSaved={async()=>{setShowStudent(false);await load()}}/>}{showGroup&&<CreateGroup courses={courses} onClose={()=>setShowGroup(false)} onSaved={async()=>{setShowGroup(false);await load()}}/>}{showCourse&&<CreateCourse onClose={()=>setShowCourse(false)} onSaved={async()=>{setShowCourse(false);await load()}}/>}{showPayment&&<CreatePayment students={students} courses={courses} onClose={()=>setShowPayment(false)} onSaved={async()=>{setShowPayment(false);await load()}}/>}{showAttendance&&<CreateAttendance students={students} groups={groups} onClose={()=>setShowAttendance(false)} onSaved={async()=>{setShowAttendance(false);await load()}}/>}</main>
 }
 
 function Head({eyebrow,title,sub,action}:{eyebrow:string;title:string;sub?:string;action?:React.ReactNode}){return <div className="crm-title"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{sub&&<p className="muted">{sub}</p>}</div>{action}</div>}
@@ -50,7 +50,395 @@ function Groups({groups,students,onAdd,onRefresh}:{groups:Group[];students:Stude
 function Courses({courses,onAdd}:{courses:Course[];onAdd:()=>void}){return <><Head eyebrow="COURSE CATALOG" title="Kurslar." sub="Kurs katalogi, davomiylik va narxlarni boshqaring." action={<button className="btn primary" onClick={onAdd}><Plus size={15}/> Kurs qo‘shish</button>}/><div className="crm-card-grid">{courses.map(c=><div className="crm-panel group-card" key={c.id}><div className="group-top"><span className="status status-new">{c.active?"ACTIVE":"INACTIVE"}</span><BookOpen size={17}/></div><h3>{c.name}</h3><p>{c.code||"NOVA"} · {c.duration_months} oy</p><strong className="course-price">{Number(c.price).toLocaleString("uz-UZ")} so‘m</strong></div>)}</div></>}
 function AttendancePage({rows,students,groups,onAdd}:{rows:Attendance[];students:Student[];groups:Group[];onAdd:()=>void}){return <><Head eyebrow="ATTENDANCE" title="Davomat." sub="Keldi, kelmadi, kechikdi yoki uzrli holatlarni tarix bilan saqlang." action={<button className="btn primary" onClick={onAdd}><Plus size={15}/> Davomat kiritish</button>}/><div className="crm-panel table-panel"><div className="table-wrap"><table><thead><tr><th>Sana</th><th>O‘quvchi</th><th>Holat</th><th>Izoh</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.attendance_date}</td><td><b>{(r as any).student?.full_name||students.find(s=>s.id===r.student_id)?.full_name||"—"}</b></td><td><span className={`status ${r.status==="present"?"status-studying":r.status==="late"?"status-new":"status-rejected"}`}>{r.status}</span></td><td>{r.note||"—"}</td></tr>)}</tbody></table></div></div></>}
 function PaymentsPage({rows,students,onAdd}:{rows:Payment[];students:Student[];onAdd:()=>void}){const total=rows.filter(x=>x.status==="paid").reduce((a,x)=>a+Number(x.amount),0);return <><Head eyebrow="FINANCE" title="To‘lovlar." sub="To‘lovlar, kvitansiyalar va moliyaviy tarixni boshqaring." action={<button className="btn primary" onClick={onAdd}><Plus size={15}/> To‘lov kiritish</button>}/><div className="crm-metrics"><Metric label="Jami tushum" value={`${total.toLocaleString("uz-UZ")} so‘m`} icon={<DollarSign/>}/><Metric label="Tranzaksiyalar" value={rows.length} icon={<CreditCard/>}/></div><div className="crm-panel table-panel" style={{marginTop:12}}><div className="table-wrap"><table><thead><tr><th>Sana</th><th>O‘quvchi</th><th>Summa</th><th>Usul</th><th>Status</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.payment_date}</td><td>{(r as any).student?.full_name||students.find(s=>s.id===r.student_id)?.full_name||"—"}</td><td><strong>{Number(r.amount).toLocaleString("uz-UZ")} so‘m</strong></td><td>{r.method}</td><td><span className="status status-studying">{r.status}</span></td></tr>)}</tbody></table></div></div></>}
-function Leads({leads,onRefresh}:{leads:Lead[];onRefresh:()=>void}){async function update(id:string,status:string){const {error}=await supabase.from("applications").update({status}).eq("id",id);if(error)alert(error.message);else onRefresh()}return <><Head eyebrow="ADMISSIONS / LEADS" title="Arizalar." sub="Lead → suhbat → qabul → o‘quvchi jarayonini boshqaring."/><div className="crm-card-grid lead-grid">{leads.map(l=><div className="crm-panel" key={l.id}><div className="lead-head"><span className={`status status-${l.status}`}>{leadStatuses[l.status as keyof typeof leadStatuses]||l.status}</span><span className="mono">{l.application_number}</span></div><h3>{l.full_name}</h3><p>{l.phone} · {l.email||"email yo‘q"}</p><small>{l.course}</small><div className="lead-actions">{Object.entries(leadStatuses).slice(0,5).map(([k,v])=><button key={k} className="small-action" onClick={()=>update(l.id,k)}>{v}</button>)}</div></div>)}</div></>}
+function Leads({leads,groups,onRefresh}:{leads:Lead[];groups:Group[];onRefresh:()=>void}){
+ const [selected,setSelected]=useState<Lead|null>(null);
+
+ async function update(id:string,status:string){
+  const {error}=await supabase.from("applications").update({status}).eq("id",id);
+  if(error) alert(error.message);
+  else onRefresh();
+ }
+
+ return <>
+  <Head eyebrow="ADMISSIONS / LEADS" title="Arizalar." sub="Lead → suhbat → qabul → o‘quvchi jarayonini boshqaring."/>
+
+  <div className="crm-card-grid lead-grid">
+   {leads.map(l=>
+    <div className="crm-panel" key={l.id}>
+     <div className="lead-head">
+      <span className={`status status-${l.status}`}>
+       {leadStatuses[l.status as keyof typeof leadStatuses]||l.status}
+      </span>
+      <span className="mono">{l.application_number}</span>
+     </div>
+
+     <h3>{l.full_name}</h3>
+     <p>{l.phone} · {l.email||"email yo‘q"}</p>
+     <small>{l.course}</small>
+
+     <div className="lead-actions">
+      <button className="small-action" onClick={()=>update(l.id,"contacted")}>
+       Bog‘lanildi
+      </button>
+
+      <button className="small-action" onClick={()=>update(l.id,"interview")}>
+       Suhbat
+      </button>
+
+      <button className="small-action" onClick={()=>setSelected(l)}>
+       <Check size={14}/> O‘quvchi qabul qilish
+      </button>
+
+      <button className="small-action" onClick={()=>update(l.id,"rejected")}>
+       Rad etish
+      </button>
+     </div>
+    </div>
+   )}
+  </div>
+
+  {selected&&
+   <AcceptStudentModal
+    application={selected}
+    groups={groups}
+    onClose={()=>setSelected(null)}
+    onSaved={async()=>{
+     setSelected(null);
+     await onRefresh();
+    }}
+   />
+  }
+ </>
+}
+
+function AcceptStudentModal({
+ application,
+ groups,
+ onClose,
+ onSaved
+}:{
+ application:Lead;
+ groups:Group[];
+ onClose:()=>void;
+ onSaved:()=>void;
+}){
+ const [groupId,setGroupId]=useState("");
+ const [password,setPassword]=useState("");
+ const [startedAt,setStartedAt]=useState(new Date().toISOString().slice(0,10));
+ const [paymentAmount,setPaymentAmount]=useState("");
+ const [paymentDate,setPaymentDate]=useState(new Date().toISOString().slice(0,10));
+ const [paymentStatus,setPaymentStatus]=useState("paid");
+ const [paymentMethod,setPaymentMethod]=useState("cash");
+ const [paymentNote,setPaymentNote]=useState("");
+ const [schedule,setSchedule]=useState<any[]>([]);
+ const [saving,setSaving]=useState(false);
+ const [error,setError]=useState("");
+
+ const selectedGroup=groups.find((g:any)=>g.id===groupId);
+
+ useEffect(()=>{
+  if(!groupId){
+   setSchedule([]);
+   return;
+  }
+
+  supabase
+   .from("schedule_events")
+   .select("id,title,room,starts_at,ends_at,status,note")
+   .eq("group_id",groupId)
+   .order("starts_at",{ascending:true})
+   .limit(20)
+   .then(({data,error})=>{
+    if(error){
+     setError(error.message);
+     return;
+    }
+    setSchedule(data||[]);
+   });
+ },[groupId]);
+
+ async function accept(){
+  setError("");
+
+  if(!groupId){
+   setError("Guruhni tanlang.");
+   return;
+  }
+
+  if(!password||password.length<8){
+   setError("Parol kamida 8 belgidan iborat bo‘lishi kerak.");
+   return;
+  }
+
+  setSaving(true);
+
+  try{
+   const response=await fetch("/api/admin/applications/accept",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+     application_id:application.id,
+     group_id:groupId,
+     password,
+     started_at:startedAt,
+     payment_amount:Number(paymentAmount||0),
+     payment_date:paymentDate,
+     payment_status:paymentStatus,
+     payment_method:paymentMethod,
+     payment_note:paymentNote
+    })
+   });
+
+   const result=await response.json();
+
+   if(!response.ok){
+    setError(result.error||"O‘quvchini qabul qilishda xatolik.");
+    return;
+   }
+
+   alert(
+    `O‘quvchi muvaffaqiyatli qabul qilindi.\n\nLogin: ${result.login}\nGuruh: ${result.group}`
+   );
+
+   await onSaved();
+  }catch(e:any){
+   setError(e?.message||"Server bilan bog‘lanishda xatolik.");
+  }finally{
+   setSaving(false);
+  }
+ }
+
+ return(
+  <div className="drawer-backdrop">
+   <aside className="drawer">
+
+    <div className="drawer-head">
+     <div>
+      <div className="eyebrow">ADMISSION / ACCEPT STUDENT</div>
+      <h2>{application.full_name}</h2>
+      <p>{application.phone} · {application.course}</p>
+     </div>
+
+     <button className="close" onClick={onClose}>
+      <X/>
+     </button>
+    </div>
+
+    <div className="drawer-body">
+
+     <div className="crm-panel">
+      <div className="eyebrow">STUDENT ACCESS</div>
+      <h3>O‘quvchi login ma’lumotlari</h3>
+
+      <div className="field">
+       <label>Login / Telefon raqami</label>
+       <input value={application.phone} readOnly/>
+      </div>
+
+      <div className="field" style={{marginTop:14}}>
+       <label>Parol *</label>
+       <input
+        type="password"
+        value={password}
+        onChange={e=>setPassword(e.target.value)}
+        placeholder="Admin o‘zi belgilaydi"
+        minLength={8}
+        required
+       />
+      </div>
+
+      <small className="muted">
+       Login o‘quvchining telefon raqami bo‘ladi.
+      </small>
+     </div>
+
+     <div className="crm-panel" style={{marginTop:16}}>
+      <div className="eyebrow">GROUP ASSIGNMENT</div>
+      <h3>Guruhga biriktirish</h3>
+
+      <div className="field">
+       <label>Guruh *</label>
+
+       <select
+        value={groupId}
+        onChange={e=>setGroupId(e.target.value)}
+        required
+       >
+        <option value="">Guruhni tanlang</option>
+
+        {groups
+         .filter((g:any)=>g.active!==false)
+         .map((g:any)=>
+          <option key={g.id} value={g.id}>
+           {g.name} — {g.course}
+          </option>
+         )}
+       </select>
+      </div>
+
+      {selectedGroup&&
+       <div className="drawer-grid" style={{marginTop:16}}>
+        <div>
+         <span>Kurs</span>
+         <strong>{selectedGroup.course}</strong>
+        </div>
+
+        <div>
+         <span>Daraja</span>
+         <strong>{selectedGroup.level}</strong>
+        </div>
+
+        <div>
+         <span>Sig‘im</span>
+         <strong>{selectedGroup.capacity}</strong>
+        </div>
+       </div>
+      }
+
+      <div className="field" style={{marginTop:14}}>
+       <label>O‘qishni boshlash sanasi</label>
+
+       <input
+        type="date"
+        value={startedAt}
+        onChange={e=>setStartedAt(e.target.value)}
+       />
+      </div>
+     </div>
+
+     <div className="crm-panel" style={{marginTop:16}}>
+      <div className="eyebrow">CLASS SCHEDULE</div>
+      <h3>Dars vaqtlari</h3>
+
+      {!groupId&&
+       <p className="muted">Avval guruhni tanlang.</p>
+      }
+
+      {groupId&&!schedule.length&&
+       <p className="muted">
+        Bu guruh uchun jadval hali kiritilmagan.
+       </p>
+      }
+
+      {schedule.map(item=>
+       <div key={item.id} className="history-row">
+        <CalendarDays size={18}/>
+
+        <div>
+         <strong>{item.title}</strong>
+
+         <span>
+          {new Date(item.starts_at).toLocaleString("uz-UZ")}
+          {" — "}
+          {new Date(item.ends_at).toLocaleTimeString(
+           "uz-UZ",
+           {hour:"2-digit",minute:"2-digit"}
+          )}
+         </span>
+
+         {item.room&&
+          <span>Xona: {item.room}</span>
+         }
+        </div>
+       </div>
+      )}
+     </div>
+
+     <div className="crm-panel" style={{marginTop:16}}>
+      <div className="eyebrow">PAYMENT</div>
+      <h3>To‘lov ma’lumotlari</h3>
+
+      <div className="drawer-grid">
+
+       <div className="field">
+        <label>To‘langan summa</label>
+        <input
+         type="number"
+         min="0"
+         value={paymentAmount}
+         onChange={e=>setPaymentAmount(e.target.value)}
+         placeholder="0"
+        />
+       </div>
+
+       <div className="field">
+        <label>To‘lov sanasi</label>
+        <input
+         type="date"
+         value={paymentDate}
+         onChange={e=>setPaymentDate(e.target.value)}
+        />
+       </div>
+
+       <div className="field">
+        <label>Holati</label>
+
+        <select
+         value={paymentStatus}
+         onChange={e=>setPaymentStatus(e.target.value)}
+        >
+         <option value="paid">To‘langan</option>
+         <option value="pending">Kutilmoqda</option>
+         <option value="refunded">Qaytarilgan</option>
+        </select>
+       </div>
+
+       <div className="field">
+        <label>To‘lov usuli</label>
+
+        <select
+         value={paymentMethod}
+         onChange={e=>setPaymentMethod(e.target.value)}
+        >
+         <option value="cash">Naqd</option>
+         <option value="card">Karta</option>
+         <option value="transfer">Bank o‘tkazmasi</option>
+         <option value="online">Online</option>
+         <option value="other">Boshqa</option>
+        </select>
+       </div>
+
+      </div>
+
+      <div className="field" style={{marginTop:14}}>
+       <label>To‘lov izohi</label>
+
+       <textarea
+        value={paymentNote}
+        onChange={e=>setPaymentNote(e.target.value)}
+        placeholder="Masalan: sentabr oyi uchun..."
+       />
+      </div>
+     </div>
+
+     {error&&
+      <div className="crm-alert" style={{marginTop:16}}>
+       {error}
+      </div>
+     }
+
+    </div>
+
+    <div className="drawer-actions">
+     <button className="btn" onClick={onClose} disabled={saving}>
+      Bekor qilish
+     </button>
+
+     <button
+      className="btn primary"
+      onClick={accept}
+      disabled={saving}
+     >
+      <Check size={16}/>
+      {saving?"Qabul qilinmoqda...":"O‘QUVCHINI QABUL QILISH"}
+     </button>
+    </div>
+
+   </aside>
+  </div>
+ )
+}
+
 function Staff({staff}:{staff:Student[]}){return <><Head eyebrow="PEOPLE" title="Mentorlar va xodimlar." sub="Xodim profili va CRM rollarini ko‘ring."/><div className="crm-card-grid">{staff.map(s=><div className="crm-panel group-card" key={s.id}><div className="student-cell"><div className="avatar">{s.full_name.split(" ").map(x=>x[0]).slice(0,2).join("")}</div><div><h3>{s.full_name}</h3><p>{s.role}</p></div></div><div className="drawer-grid" style={{marginTop:18}}><div><span>Telefon</span><strong>{s.phone||"—"}</strong></div><div><span>Email</span><strong>{s.email||"—"}</strong></div></div></div>)}</div></>}
 function Schedule({events}:{events:any[];groups:Group[];staff:Student[]}){return <><Head eyebrow="ACADEMIC CALENDAR" title="Jadval." sub="Guruh va mentor darslarini markazlashtirilgan kalendarda boshqaring."/><div className="crm-panel table-panel"><div className="table-wrap"><table><thead><tr><th>Vaqt</th><th>Dars</th><th>Guruh</th><th>Mentor</th><th>Xona</th><th>Status</th></tr></thead><tbody>{events.map(e=><tr key={e.id}><td>{new Date(e.starts_at).toLocaleString("uz-UZ")}</td><td><b>{e.title}</b></td><td>{e.group?.name||"—"}</td><td>{e.mentor?.full_name||"—"}</td><td>{e.room||"—"}</td><td>{e.status}</td></tr>)}</tbody></table></div></div></>}
 function Reports({students,groups,payments,attendance}:{students:Student[];groups:Group[];payments:Payment[];attendance:Attendance[]}){const paid=payments.filter(p=>p.status==="paid").reduce((a,p)=>a+Number(p.amount),0);const present=attendance.filter(a=>a.status==="present").length;return <><Head eyebrow="ANALYTICS" title="Hisobotlar." sub="CRM ma’lumotlari asosida operatsion ko‘rsatkichlar."/><div className="crm-metrics"><Metric label="O‘quvchilar" value={students.length} icon={<Users/>}/><Metric label="Guruhlar" value={groups.length} icon={<BookOpen/>}/><Metric label="Tushum" value={`${paid.toLocaleString("uz-UZ")} so‘m`} icon={<DollarSign/>}/><Metric label="Davomat" value={attendance.length?`${Math.round(present/attendance.length*100)}%`:"0%"} icon={<ClipboardCheck/>}/></div><div className="crm-panel report-list"><div><span>Faol o‘quvchilar</span><strong>{students.filter(s=>s.status==="active").length}</strong></div><div><span>Faol guruhlar</span><strong>{groups.filter(g=>g.active).length}</strong></div><div><span>Paid tranzaksiyalar</span><strong>{payments.filter(p=>p.status==="paid").length}</strong></div></div></>}
