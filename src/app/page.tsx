@@ -8,11 +8,13 @@ import CourseDetail from "@/components/CourseDetail";
 import { courses, roadmap, faqs, projects } from "@/lib/data";
 import type { Course } from "@/types";
 import NovaMotion from "@/components/NovaMotion";
+import HackerScreen from "@/components/HackerScreen";
 
 export default function Home() {
   const [apply,setApply]=useState(false); const [selected,setSelected]=useState<Course|null>(null); const [selectedCourse,setSelectedCourse]=useState<Course|null>(null);
   const openApply=(course?:Course)=>{setSelected(null);setSelectedCourse(course??null);setApply(true)};
   return <>
+    <HackerScreen />
     <Navbar onApply={()=>openApply()}/>
     <NovaMotion />
       <main>
